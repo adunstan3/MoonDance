@@ -3,30 +3,20 @@ import SwiftUI
 
 @main
 struct MoondanceApp: App {
-    @State private var settings: AppSettings
-    @State private var board: BoardManager
-    private let container: ModelContainer
-
-    init() {
-        let defaults = RuntimeEnvironment.userDefaults
-        let settings = AppSettings(defaults: defaults)
-        _settings = State(initialValue: settings)
-        _board = State(initialValue: BoardManager(settings: settings))
-        do {
-            container = try Store.makeContainer(inMemory: RuntimeEnvironment.isUITesting)
-        } catch {
-            fatalError("Couldn't open the data store: \(error)")
-        }
-    }
+    private let model = AppModel.shared
 
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environment(settings)
-                .environment(board)
+                .environment(model)
+                .environment(model.settings)
+                .environment(model.board)
+                .environment(model.router)
+                .environment(model.session)
+                .environment(model.banner)
                 .tint(Theme.blue)
         }
-        .modelContainer(container)
+        .modelContainer(model.container)
     }
 }
 

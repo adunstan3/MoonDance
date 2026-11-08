@@ -4,10 +4,9 @@ import SwiftUI
 struct LightControls: View {
     let problem: Problem
 
+    @Environment(AppModel.self) private var model
     @Environment(BoardManager.self) private var board
     @Environment(SessionModel.self) private var session
-    @Environment(AppSettings.self) private var settings
-    @Environment(Router.self) private var router
 
     enum Display: Equatable {
         case ready
@@ -21,7 +20,7 @@ struct LightControls: View {
     var body: some View {
         switch display {
         case .ready:
-            Button(action: light) {
+            Button { model.lightCurrent() } label: {
                 Label("Light it", systemImage: "lightbulb")
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: Self.height)
@@ -41,7 +40,7 @@ struct LightControls: View {
             }
         case .failed:
             HStack(spacing: 6) {
-                Button(action: light) {
+                Button { model.lightCurrent() } label: {
                     StatusCapsule(color: Theme.red, text: "Retry")
                 }
                 .buttonStyle(.plain)
@@ -53,10 +52,7 @@ struct LightControls: View {
     }
 
     private var clearButton: some View {
-        Button {
-            board.clearBoard()
-            session.litProblemID = nil
-        } label: {
+        Button { model.clearBoard() } label: {
             Text("Clear")
                 .font(.headline)
                 .foregroundStyle(Theme.red)
@@ -67,17 +63,6 @@ struct LightControls: View {
         .accessibilityLabel("Clear board")
     }
 
-    private func light() {
-        guard settings.hasSavedBoard else {
-            // First Light it: find and save the box, then light this problem.
-            session.pendingLight = SessionModel.PendingLight(problemID: problem.problemId, holds: problem.holds)
-            router.push(.findBoard)
-            return
-        }
-        session.litProblemID = problem.problemId
-        board.light(problem.holds)
-    }
-
     /// What to show, from the board's status and which problem was lit last.
     var display: Display {
         Self.display(status: board.status, lastJob: board.lastJob,
@@ -85,7 +70,7 @@ struct LightControls: View {
     }
 
     static func display(status: BoardManager.Status, lastJob: BoardManager.JobKind?,
-                                    isThisProblem: Bool) -> Display {
+                        isThisProblem: Bool) -> Display {
         switch status {
         case .connecting:
             return .working(lastJob == .clear ? "Clearing…" : "Connecting…")

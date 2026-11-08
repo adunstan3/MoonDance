@@ -16,8 +16,8 @@ struct HoldGridView: View {
                     context.fill(Path(ellipseIn: rect), with: .color(Color(white: 0.32)))
                 }
             }
-            let radius = layout.cell * 0.42
-            let line = max(1.5, layout.cell * 0.14)
+            let radius = layout.cell * 0.46
+            let line = max(1.5, layout.cell * 0.13)
             for hold in holds {
                 guard let position = GridPosition(hold.position) else { continue }
                 let center = layout.center(column: position.column, row: position.row)

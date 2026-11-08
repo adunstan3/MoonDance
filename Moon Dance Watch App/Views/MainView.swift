@@ -1,20 +1,25 @@
 import SwiftData
 import SwiftUI
 
-/// Session is home; the other pages are a swipe left. Pages swipe sideways so
-/// the Digital Crown stays free for stepping through problems.
+/// Session is home; Projects, History and Settings are a swipe left. Pages swipe
+/// sideways so the Digital Crown stays free for stepping through problems.
 struct MainView: View {
     @Environment(\.modelContext) private var context
+    @Environment(AppModel.self) private var model
     @Environment(AppSettings.self) private var settings
-    @Environment(BoardManager.self) private var board
-    @State private var router = Router()
-    @State private var session = SessionModel()
+    @Environment(Router.self) private var router
+    @Environment(SessionModel.self) private var session
 
     var body: some View {
+        @Bindable var router = router
         NavigationStack(path: $router.path) {
             TabView(selection: $router.page) {
                 SessionView()
                     .tag(Page.session)
+                ProjectsView()
+                    .tag(Page.projects)
+                HistoryView()
+                    .tag(Page.history)
                 SettingsView()
                     .tag(Page.settings)
             }
@@ -23,8 +28,6 @@ struct MainView: View {
                 destination(for: route)
             }
         }
-        .environment(router)
-        .environment(session)
         .onAppear {
             session.reload(context: context, settings: settings)
             offerFindBoardOnFirstLaunch()
@@ -59,18 +62,29 @@ struct MainView: View {
         }
     }
 
-    /// `-openScreen list|grade|log` and `-page projects` jump straight to a screen (DEBUG only).
+    /// DEBUG launch arguments for screenshots:
+    /// `-openScreen list|grade|log|settings|find|export`, `-page projects|history|settings`,
+    /// `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent`, `-demoLogs YES`.
     private func applyDebugLaunchArguments() {
         #if DEBUG
+        if RuntimeEnvironment.debugValue("demoLogs") != nil {
+            DemoData.addLogs(context: context, settings: settings)
+            reload()
+        }
         switch RuntimeEnvironment.debugValue("demoBoard") {
         case "lit":
             session.litProblemID = session.current?.problemId
-            board.debugSetStatus(.lit)
+            model.board.debugSetStatus(.lit)
         case "failed":
             session.litProblemID = session.current?.problemId
-            board.debugSetStatus(.failed("The board didn't answer"))
+            model.board.debugSetStatus(.failed("The board didn't answer"))
         case "connecting":
-            board.debugSetStatus(.connecting)
+            model.board.debugSetStatus(.connecting)
+        default: break
+        }
+        switch RuntimeEnvironment.debugValue("demoBanner") {
+        case "attempt": model.logAttempt()
+        case "sent": model.markSent()
         default: break
         }
         #endif
