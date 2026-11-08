@@ -22,7 +22,7 @@ struct RootView: View {
                     Text("Loading problems…").foregroundStyle(Theme.secondaryText)
                 }
             case .ready:
-                ContentView()
+                MainView()
             case .failed(let message):
                 VStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.red)

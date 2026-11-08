@@ -101,6 +101,14 @@ final class BoardManager: NSObject {
         status = .idle
     }
 
+    #if DEBUG
+    /// Screenshots and tests only: pretend a job ended this way.
+    func debugSetStatus(_ status: Status, lastJob: JobKind = .light) {
+        self.status = status
+        self.lastJob = lastJob
+    }
+    #endif
+
     /// Starts listing nearby LED boxes for Find board.
     func startScan() {
         wantsDiscovery = true
