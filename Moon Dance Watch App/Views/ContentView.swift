@@ -1,12 +1,17 @@
+import SwiftData
 import SwiftUI
 
-/// Temporary home for milestone 1: a link to the Bluetooth log.
+/// Temporary home until milestone 3: problem counts and a link to the Bluetooth log.
 struct ContentView: View {
+    @Query private var problems: [Problem]
     @State private var showLog = false
 
     var body: some View {
         NavigationStack {
             List {
+                ForEach(HoldSet.allCases) { set in
+                    LabeledContent(set.label, value: "\(problems.filter { $0.holdSet == set.rawValue }.count)")
+                }
                 NavigationLink {
                     BluetoothLogView()
                 } label: {
@@ -17,9 +22,7 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showLog) { BluetoothLogView() }
         }
         .onAppear {
-            #if DEBUG
-            showLog = UserDefaults.standard.string(forKey: "openScreen") == "log"
-            #endif
+            showLog = RuntimeEnvironment.debugValue("openScreen") == "log"
         }
     }
 }
