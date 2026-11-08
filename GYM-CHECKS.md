@@ -28,3 +28,14 @@ Source: the community emulator github.com/e-sr/moonboard (`ble/moonboard_app_pro
    if problems don't light, try Bluetooth log › Flags packet › `~D*`.
 6. **Disconnect timing.** We disconnect 0.4 s after the last write so phones can
    connect. If only part of a problem lights, the box may need longer.
+
+## Find board and auto-connect (milestone 4)
+
+7. **Find board** lists boxes named "moon…" or advertising the UART service, with
+   the 12-digit ID if the box's name contains one (otherwise the first 8 characters
+   of the watch's identifier for it). Check the ID shown matches the box's label.
+8. **Auto-connect.** The saved box is remembered by Core Bluetooth's identifier on
+   this watch. After a relaunch, Light it should connect without scanning; the log
+   says "Saved board found by the system".
+9. **Sharing the board.** After Light it, check someone's phone can connect with
+   the official app straight away.

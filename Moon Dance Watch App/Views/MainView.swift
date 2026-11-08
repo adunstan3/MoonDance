@@ -15,8 +15,8 @@ struct MainView: View {
             TabView(selection: $router.page) {
                 SessionView()
                     .tag(Page.session)
-                MorePage()
-                    .tag(Page.projects)
+                SettingsView()
+                    .tag(Page.settings)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .navigationDestination(for: Route.self) { route in
@@ -27,11 +27,20 @@ struct MainView: View {
         .environment(session)
         .onAppear {
             session.reload(context: context, settings: settings)
+            offerFindBoardOnFirstLaunch()
             applyDebugLaunchArguments()
         }
         .onChange(of: settings.holdSet) { reload() }
         .onChange(of: settings.lastGrade) { reload() }
         .onChange(of: settings.benchmarksOnly) { reload() }
+    }
+
+    /// First launch with no saved box: open Find board once (it has a Not now button).
+    private func offerFindBoardOnFirstLaunch() {
+        let key = "offeredFindBoard"
+        guard !settings.hasSavedBoard, !settings.defaults.bool(forKey: key) else { return }
+        settings.defaults.set(true, forKey: key)
+        router.push(.findBoard)
     }
 
     private func reload() {
@@ -44,7 +53,9 @@ struct MainView: View {
         case .problemList: ProblemListView()
         case .gradePicker: GradePickerView()
         case .bluetoothLog: BluetoothLogView()
-        case .settings, .findBoard, .export: BluetoothLogView()
+        case .settings: SettingsView()
+        case .findBoard: FindBoardView()
+        case .export: Text("Export comes in milestone 6")
         }
     }
 
@@ -77,21 +88,6 @@ struct MainView: View {
         case "find": router.push(.findBoard)
         case "export": router.push(.export)
         default: break
-        }
-    }
-}
-
-/// Temporary second page until the Projects, History and Settings pages exist.
-private struct MorePage: View {
-    @Environment(Router.self) private var router
-
-    var body: some View {
-        List {
-            Button {
-                router.push(.bluetoothLog)
-            } label: {
-                Label("Bluetooth log", systemImage: "antenna.radiowaves.left.and.right")
-            }
         }
     }
 }

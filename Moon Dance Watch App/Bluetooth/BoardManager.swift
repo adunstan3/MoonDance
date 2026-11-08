@@ -107,6 +107,14 @@ final class BoardManager: NSObject {
         self.status = status
         self.lastJob = lastJob
     }
+
+    /// Screenshots only: two fake boxes in the Find board list.
+    func debugAddDemoBoards() {
+        discovered = [
+            DiscoveredBoard(id: UUID(), name: "MoonBoard 482910375561", rssi: -58, looksLikeBoard: true),
+            DiscoveredBoard(id: UUID(), name: "MoonBoard 120394857712", rssi: -86, looksLikeBoard: true),
+        ]
+    }
     #endif
 
     /// Starts listing nearby LED boxes for Find board.

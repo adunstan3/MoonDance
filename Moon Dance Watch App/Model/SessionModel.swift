@@ -13,6 +13,14 @@ final class SessionModel {
     /// The problem most recently sent to the board with Light it.
     var litProblemID: String?
 
+    /// Light it was tapped before a board was saved: light this once Find board saves one.
+    struct PendingLight: Equatable {
+        let problemID: String
+        let holds: [Hold]
+    }
+
+    var pendingLight: PendingLight?
+
     var current: Problem? { problems.indices.contains(index) ? problems[index] : nil }
 
     /// "3 / 42"

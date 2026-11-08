@@ -6,6 +6,8 @@ struct LightControls: View {
 
     @Environment(BoardManager.self) private var board
     @Environment(SessionModel.self) private var session
+    @Environment(AppSettings.self) private var settings
+    @Environment(Router.self) private var router
 
     enum Display: Equatable {
         case ready
@@ -66,6 +68,12 @@ struct LightControls: View {
     }
 
     private func light() {
+        guard settings.hasSavedBoard else {
+            // First Light it: find and save the box, then light this problem.
+            session.pendingLight = SessionModel.PendingLight(problemID: problem.problemId, holds: problem.holds)
+            router.push(.findBoard)
+            return
+        }
         session.litProblemID = problem.problemId
         board.light(problem.holds)
     }
