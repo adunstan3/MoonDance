@@ -67,3 +67,12 @@ To try at home first (no board needed):
     - **Workout app**: Moondance starts a climbing workout (HealthKit), and the
       Action Button can be set to it. Needs the HealthKit capability; a bonus is the
       app stays on screen during the session.
+
+## Export (milestone 6)
+
+11. Settings › Export logs › **Mail or Messages** opens the watch share sheet. Send
+    it to yourself by Mail and check the attachment opens as a spreadsheet. The
+    sheet offers a `.csv` file, and plain text where a file isn't accepted (Messages
+    may take the text). This can be tested at home over cellular.
+12. "Last export" in Settings is the last time the share sheet was opened; watchOS
+    doesn't tell the app whether you actually sent it.

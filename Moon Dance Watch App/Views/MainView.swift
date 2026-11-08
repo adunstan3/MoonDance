@@ -58,7 +58,7 @@ struct MainView: View {
         case .bluetoothLog: BluetoothLogView()
         case .settings: SettingsView()
         case .findBoard: FindBoardView()
-        case .export: Text("Export comes in milestone 6")
+        case .export: ExportView()
         }
     }
 
