@@ -76,3 +76,12 @@ To try at home first (no board needed):
     may take the text). This can be tested at home over cellular.
 12. "Last export" in Settings is the last time the share sheet was opened; watchOS
     doesn't tell the app whether you actually sent it.
+
+## Connection states and errors (milestone 7)
+
+13. The bottom button shows the state: **Light it** (idle), a blue dot while
+    connecting/sending, **● Lit** in green with **Clear**, or **● Retry** in red.
+    A failure also shows a red banner saying what to do (move closer, turn on
+    Bluetooth, board busy…) and the full reason goes to the Bluetooth log.
+14. Walk out of range and tap Light it: after 15 s it should say "Board didn't
+    answer. Move closer and retry".

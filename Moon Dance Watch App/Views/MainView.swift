@@ -77,7 +77,8 @@ struct MainView: View {
             model.board.debugSetStatus(.lit)
         case "failed":
             session.litProblemID = session.current?.problemId
-            model.board.debugSetStatus(.failed("The board didn't answer"))
+            model.board.debugSetStatus(.failed(.timedOut(seconds: 15)))
+            model.boardJobEnded(model.board.status)
         case "connecting":
             model.board.debugSetStatus(.connecting)
         default: break

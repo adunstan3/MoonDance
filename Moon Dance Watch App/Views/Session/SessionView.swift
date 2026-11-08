@@ -116,10 +116,12 @@ struct BannerView: View {
         HStack(spacing: 6) {
             if banner.kind == .sent {
                 Image(systemName: "checkmark.circle")
+            } else if banner.kind == .error {
+                Image(systemName: "exclamationmark.triangle.fill")
             }
             Text(banner.text)
                 .font(.footnote.weight(.bold))
-                .lineLimit(1)
+                .lineLimit(2)
                 .minimumScaleFactor(0.7)
             Spacer(minLength: 2)
             if banner.entryID != nil {
@@ -150,6 +152,7 @@ struct BannerView: View {
         switch banner.kind {
         case .attempt, .info: Theme.blue
         case .sent: Theme.green
+        case .error: Theme.red
         }
     }
 }

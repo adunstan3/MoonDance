@@ -31,7 +31,7 @@ final class BoardManager: NSObject {
         case sending
         case lit
         case cleared
-        case failed(String)
+        case failed(BoardFailure)
     }
 
     enum JobKind: String {
@@ -52,6 +52,8 @@ final class BoardManager: NSObject {
 
     let log: BluetoothLog
     let settings: AppSettings
+    /// Called when a job ends (lit, cleared or failed), for banners and haptics.
+    @ObservationIgnored var onJobEnded: ((Status) -> Void)?
 
     private struct Job {
         let id = UUID()
@@ -235,13 +237,15 @@ final class BoardManager: NSObject {
         status = job.kind == .light ? .lit : .cleared
         log.add("\(job.kind.rawValue) done; disconnecting so others can use the board")
         endJob()
+        onJobEnded?(status)
     }
 
-    private func fail(_ message: String) {
+    private func fail(_ failure: BoardFailure) {
         guard job != nil else { return }
-        log.error(message)
-        status = .failed(message)
+        log.error(failure.logText)
+        status = .failed(failure)
         endJob()
+        onJobEnded?(status)
     }
 
     private func endJob() {
@@ -262,18 +266,18 @@ final class BoardManager: NSObject {
         Task { [weak self] in
             try? await Task.sleep(for: Self.jobTimeout)
             guard let self, self.job?.id == jobID else { return }
-            self.fail("Timed out: the board didn't answer within \(Self.jobTimeout.components.seconds) s")
+            self.fail(.timedOut(seconds: Self.jobTimeout.components.seconds))
         }
     }
 
     private func failIfUnusable(_ state: CBManagerState) {
         switch state {
         case .unsupported:
-            fail("Bluetooth isn't supported here (the simulator has no Bluetooth)")
+            fail(.bluetoothUnavailable)
         case .unauthorized:
-            fail("Bluetooth permission is off: Settings › Privacy › Bluetooth › Moondance")
+            fail(.bluetoothNotAllowed)
         case .poweredOff:
-            fail("Bluetooth is turned off")
+            fail(.bluetoothOff)
         default:
             break
         }
@@ -407,7 +411,7 @@ extension BoardManager: CBCentralManagerDelegate {
     nonisolated func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         MainActor.assumeIsolated {
             guard peripheral === self.peripheral else { return }
-            fail("Couldn't connect: \(error?.localizedDescription ?? "no reason given")")
+            fail(.connectFailed(error?.localizedDescription ?? "no reason given"))
         }
     }
 
@@ -420,7 +424,7 @@ extension BoardManager: CBCentralManagerDelegate {
                 log.add("Disconnected")
             }
             if peripheral === self.peripheral {
-                fail("The board disconnected before the problem was sent")
+                fail(.disconnected)
             }
         }
     }
@@ -433,13 +437,13 @@ extension BoardManager: CBPeripheralDelegate {
         MainActor.assumeIsolated {
             guard peripheral === self.peripheral else { return }
             if let error {
-                fail("Service discovery failed: \(error.localizedDescription)")
+                fail(.discoveryFailed("services: \(error.localizedDescription)"))
                 return
             }
             let services = peripheral.services ?? []
             log.add("Services: \(services.map(\.uuid.uuidString).joined(separator: ", "))")
             guard let uart = services.first(where: { $0.uuid == uartService }) else {
-                fail("The board has no UART service (\(BoardProtocol.uartServiceUUID))")
+                fail(.serviceMissing)
                 return
             }
             peripheral.discoverCharacteristics(nil, for: uart)
@@ -450,7 +454,7 @@ extension BoardManager: CBPeripheralDelegate {
         MainActor.assumeIsolated {
             guard peripheral === self.peripheral else { return }
             if let error {
-                fail("Characteristic discovery failed: \(error.localizedDescription)")
+                fail(.discoveryFailed("characteristics: \(error.localizedDescription)"))
                 return
             }
             let characteristics = service.characteristics ?? []
@@ -458,7 +462,7 @@ extension BoardManager: CBPeripheralDelegate {
                 log.add("Characteristic \(characteristic.uuid.uuidString): \(Self.describe(characteristic.properties))")
             }
             guard let rx = characteristics.first(where: { $0.uuid == rxUUID }) else {
-                fail("No RX characteristic (\(BoardProtocol.rxCharacteristicUUID))")
+                fail(.characteristicMissing)
                 return
             }
             if rx.properties.contains(.write) {
@@ -466,7 +470,7 @@ extension BoardManager: CBPeripheralDelegate {
             } else if rx.properties.contains(.writeWithoutResponse) {
                 writeType = .withoutResponse
             } else {
-                fail("The RX characteristic can't be written to")
+                fail(.notWritable)
                 return
             }
             rxCharacteristic = rx
@@ -480,7 +484,7 @@ extension BoardManager: CBPeripheralDelegate {
         MainActor.assumeIsolated {
             guard peripheral === self.peripheral, var job else { return }
             if let error {
-                fail("Write \(job.next + 1) failed: \(error.localizedDescription)")
+                fail(.writeFailed(packet: job.next + 1, reason: error.localizedDescription))
                 return
             }
             job.next += 1

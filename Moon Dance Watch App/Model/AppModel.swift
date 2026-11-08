@@ -7,7 +7,7 @@ import WatchKit
 @Observable
 final class BannerModel {
     struct Banner: Equatable, Identifiable {
-        enum Kind: Equatable { case attempt, sent, info }
+        enum Kind: Equatable { case attempt, sent, info, error }
 
         let id = UUID()
         let kind: Kind
@@ -59,6 +59,7 @@ final class AppModel {
         self.settings = settings
         self.container = container
         board = BoardManager(settings: settings)
+        board.onJobEnded = { [weak self] status in self?.boardJobEnded(status) }
     }
 
     private convenience init() {
@@ -128,6 +129,21 @@ final class AppModel {
     func clearBoard() {
         board.clearBoard()
         session.litProblemID = nil
+    }
+
+    /// Haptics for every job; a red banner saying what went wrong for failures.
+    func boardJobEnded(_ status: BoardManager.Status) {
+        switch status {
+        case .lit:
+            WKInterfaceDevice.current().play(.success)
+        case .cleared:
+            WKInterfaceDevice.current().play(.click)
+        case .failed(let failure):
+            banner.show(.init(kind: .error, text: failure.message, entryID: nil))
+            WKInterfaceDevice.current().play(.failure)
+        case .idle, .connecting, .sending:
+            break
+        }
     }
 
     // MARK: - Action Button

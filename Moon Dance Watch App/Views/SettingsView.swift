@@ -71,12 +71,15 @@ struct SettingsView: View {
 }
 
 /// What the Action Button does in each mode, as shown under the picker.
+/// watchOS doesn't let apps read the button directly or use its long press, so it
+/// runs the "Moondance Action" shortcut, which follows this setting.
 enum ActionButtonHelp {
     static func summary(for mode: ActionButtonMode) -> String {
-        switch mode {
-        case .logAttempts: "Press: +1 attempt · Long press: Sent"
-        case .lightIt: "Press: Light it"
+        let action = switch mode {
+        case .logAttempts: "Press: +1 attempt. Sent: hold the tries count."
+        case .lightIt: "Press: Light it."
         }
+        return action + " Set the button to Shortcut › Moondance Action."
     }
 }
 

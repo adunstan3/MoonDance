@@ -108,7 +108,7 @@ struct LightControlsTests {
         #expect(LightControls.display(status: .sending, lastJob: .clear, isThisProblem: false) == D.working("Clearing…"))
         #expect(LightControls.display(status: .lit, lastJob: .light, isThisProblem: true) == D.lit)
         #expect(LightControls.display(status: .lit, lastJob: .light, isThisProblem: false) == D.ready)
-        #expect(LightControls.display(status: .failed("x"), lastJob: .light, isThisProblem: true) == D.failed)
+        #expect(LightControls.display(status: .failed(.disconnected), lastJob: .light, isThisProblem: true) == D.failed)
         #expect(LightControls.display(status: .cleared, lastJob: .clear, isThisProblem: true) == D.ready)
     }
 }

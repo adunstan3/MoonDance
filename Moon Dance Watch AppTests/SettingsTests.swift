@@ -83,3 +83,35 @@ struct BoardIdentityTests {
         #expect(signal(-90) == .far)
     }
 }
+
+@MainActor
+struct BoardFailureTests {
+    @Test func everyFailureHasAShortMessageAndALogLine() {
+        let failures: [BoardFailure] = [
+            .bluetoothUnavailable, .bluetoothNotAllowed, .bluetoothOff, .timedOut(seconds: 15),
+            .connectFailed("x"), .disconnected, .discoveryFailed("x"), .serviceMissing,
+            .characteristicMissing, .notWritable, .writeFailed(packet: 2, reason: "x"),
+        ]
+        for failure in failures {
+            #expect(!failure.message.isEmpty)
+            #expect(failure.message.count <= 60, "\(failure.message) is too long for the banner")
+            #expect(!failure.logText.isEmpty)
+        }
+        #expect(BoardFailure.timedOut(seconds: 15).logText.contains("15 s"))
+    }
+
+    @Test func failedJobShowsARedBanner() throws {
+        let name = "failure-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defaults.removePersistentDomain(forName: name)
+        let model = AppModel(settings: AppSettings(defaults: defaults), container: try Store.makeContainer(inMemory: true))
+        model.boardJobEnded(.failed(.timedOut(seconds: 15)))
+        #expect(model.banner.current?.kind == .error)
+        #expect(model.banner.current?.text == BoardFailure.timedOut(seconds: 15).message)
+        #expect(model.banner.current?.entryID == nil)
+
+        model.banner.dismiss()
+        model.boardJobEnded(.lit)
+        #expect(model.banner.current == nil)
+    }
+}
