@@ -42,31 +42,13 @@ Source: the community emulator github.com/e-sr/moonboard (`ble/moonboard_app_pro
 
 ## Action Button (milestone 5)
 
-What watchOS 26 allows, as far as I could verify:
+Logging is on screen only: tap the tries count for +1 attempt, touch and hold it
+for Sent, tap the star for a project. (watchOS doesn't let an app read the Action
+Button or use its long press, and the attempt/sent shortcuts were removed.)
 
-- An app **can't read Action Button presses itself**, and **long press is reserved by
-  the system** (Siren / Quick Switch). So "press = +1 attempt, long press = Sent"
-  can't be built exactly as specified.
-- The button can run **App Intents**. Moondance now has four: **Moondance Action**
-  (does what Settings › Action Button says: +1 attempt or Light it), **Log Attempt**,
-  **Mark Sent** and **Light It**. Each opens Moondance and acts on the problem on the
-  Session screen, with the usual Undo banner.
-- On screen: tap the attempts count for +1 attempt, touch and hold it for Sent, tap
-  the star for a project.
-
-To try at home first (no board needed):
-
-10. Watch › Settings › Action Button › Action: **Shortcut**, then pick **Moondance
-    Action**. Apple says Shortcuts may need to be set up on the iPhone first, and I
-    couldn't confirm a watch-only app's App Shortcuts appear there. If Moondance isn't
-    listed, tell me; the next options both need your OK because they change targets
-    or signing:
-    - **Control widget** (watchOS 26): a small widget extension with a "Log attempt"
-      button you assign to the Action Button. Needs a new target and an App Group so
-      it can write to the same logbook.
-    - **Workout app**: Moondance starts a climbing workout (HealthKit), and the
-      Action Button can be set to it. Needs the HealthKit capability; a bonus is the
-      app stays on screen during the session.
+10. Optional: Watch › Settings › Action Button › Shortcut › **Light It** lights the
+    problem on the Session screen. If Light It isn't listed there, it can still be
+    run by Siri ("Light it in Moondance").
 
 ## Export (milestone 6)
 

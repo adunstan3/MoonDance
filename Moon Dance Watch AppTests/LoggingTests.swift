@@ -76,19 +76,14 @@ struct LoggingTests {
         #expect(!Logbook.isProject(current, in: model.context))
     }
 
-    @Test func actionButtonFollowsSettings() {
-        model.settings.actionButtonMode = .logAttempts
+    @Test func lightItWithNoSavedBoardOpensFindBoard() {
         model.router.page = .history
-        model.performActionButton()
-        #expect(stats.attempts == 1)
-        #expect(model.router.page == .session)
-
-        // Light it with no saved board goes to Find board and remembers the problem.
-        model.settings.actionButtonMode = .lightIt
-        model.performActionButton()
-        #expect(stats.attempts == 1)
+        model.lightCurrent()
+        // Remembers the problem so it lights once a board is picked.
         #expect(model.session.pendingLight?.problemID == "p1")
+        #expect(model.router.page == .session)
         #expect(model.router.path.count == 1)
+        #expect(stats.attempts == 0)
     }
 
     @Test func bannerClearsAfterUndoWindow() async throws {

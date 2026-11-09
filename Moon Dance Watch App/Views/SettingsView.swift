@@ -18,10 +18,6 @@ struct SettingsView: View {
                 SegmentedControl(options: HoldSet.allCases, selection: $settings.holdSet) { $0.label }
                 Caption("Match whatever is on the wall at Rocky Top")
 
-                SectionLabel(text: "Action Button").padding(.top, 6)
-                SegmentedControl(options: ActionButtonMode.allCases, selection: $settings.actionButtonMode) { $0.label }
-                Caption(ActionButtonHelp.summary(for: settings.actionButtonMode))
-
                 SectionLabel(text: "Board").padding(.top, 6)
                 if settings.hasSavedBoard {
                     CardButton(title: "Rocky Top board",
@@ -67,19 +63,6 @@ struct SettingsView: View {
     private var lastExportText: String {
         guard let date = settings.lastExport else { return "Not exported yet" }
         return "Last export: \(date.formatted(.dateTime.month(.abbreviated).day()))"
-    }
-}
-
-/// What the Action Button does in each mode, as shown under the picker.
-/// watchOS doesn't let apps read the button directly or use its long press, so it
-/// runs the "Moondance Action" shortcut, which follows this setting.
-enum ActionButtonHelp {
-    static func summary(for mode: ActionButtonMode) -> String {
-        let action = switch mode {
-        case .logAttempts: "Press: +1 attempt. Sent: hold the tries count."
-        case .lightIt: "Press: Light it."
-        }
-        return action + " Set the button to Shortcut › Moondance Action."
     }
 }
 

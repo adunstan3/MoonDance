@@ -1,17 +1,14 @@
 import SwiftUI
 
-/// Digital Crown picker from V0 to V14, plus Benchmarks only.
+/// Digital Crown picker from V4 to V14, plus Benchmarks only. Changes apply as
+/// soon as they're made; the back arrow returns to the list.
 struct GradePickerView: View {
     @Environment(AppSettings.self) private var settings
-    @Environment(Router.self) private var router
-
-    @State private var grade = AppSettings.defaultGrade
-    @State private var benchmarksOnly = false
-    @State private var loaded = false
 
     var body: some View {
-        VStack(spacing: 8) {
-            Picker("Grade", selection: $grade) {
+        @Bindable var settings = settings
+        VStack(spacing: 10) {
+            Picker("Grade", selection: $settings.lastGrade) {
                 ForEach(Array(Grades.range), id: \.self) { vGrade in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(Grades.vName(vGrade))
@@ -29,32 +26,12 @@ struct GradePickerView: View {
             .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.blue, lineWidth: 2.5))
             .frame(maxHeight: .infinity)
 
-            Toggle("Benchmarks only", isOn: $benchmarksOnly)
+            Toggle("Benchmarks only", isOn: $settings.benchmarksOnly)
                 .font(.footnote.weight(.semibold))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(Theme.card, in: RoundedRectangle(cornerRadius: 12))
-
-            Button {
-                settings.lastGrade = grade
-                settings.benchmarksOnly = benchmarksOnly
-                router.pop()
-            } label: {
-                Text("Done")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: LightControls.height)
-                    .background(Theme.blue, in: Capsule())
-                    .foregroundStyle(.white)
-            }
-            .buttonStyle(.plain)
         }
         .navigationTitle("Grade")
-        .ignoresSafeArea(edges: .bottom)
-        .onAppear {
-            guard !loaded else { return }
-            loaded = true
-            grade = settings.lastGrade
-            benchmarksOnly = settings.benchmarksOnly
-        }
     }
 }

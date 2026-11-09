@@ -145,15 +145,4 @@ final class AppModel {
             break
         }
     }
-
-    // MARK: - Action Button
-
-    /// What the Action Button does, per Settings.
-    func performActionButton() {
-        router.showSession()
-        switch settings.actionButtonMode {
-        case .logAttempts: logAttempt()
-        case .lightIt: lightCurrent()
-        }
-    }
 }

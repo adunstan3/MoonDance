@@ -15,7 +15,6 @@ struct SettingsTests {
         let settings = AppSettings(defaults: try freshDefaults())
         #expect(settings.holdSet == .mb2024)
         #expect(settings.lastGrade == 5)
-        #expect(settings.actionButtonMode == .logAttempts)
         #expect(!settings.benchmarksOnly)
         #expect(!settings.hasSavedBoard)
         #expect(settings.lastExport == nil)
@@ -26,7 +25,6 @@ struct SettingsTests {
         let settings = AppSettings(defaults: defaults)
         settings.holdSet = .mb2016
         settings.lastGrade = 7
-        settings.actionButtonMode = .lightIt
         settings.boardID = "ABC"
         settings.boardName = "MoonBoard 123456789012"
         let date = Date(timeIntervalSince1970: 1_800_000_000)
@@ -35,7 +33,6 @@ struct SettingsTests {
         let reloaded = AppSettings(defaults: defaults)
         #expect(reloaded.holdSet == .mb2016)
         #expect(reloaded.lastGrade == 7)
-        #expect(reloaded.actionButtonMode == .lightIt)
         #expect(reloaded.boardID == "ABC")
         #expect(reloaded.lastExport == date)
     }

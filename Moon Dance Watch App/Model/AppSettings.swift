@@ -17,27 +17,11 @@ nonisolated enum HoldSet: String, Codable, CaseIterable, Identifiable, Sendable 
     }
 }
 
-/// What the Ultra's Action Button does.
-nonisolated enum ActionButtonMode: String, CaseIterable, Identifiable, Sendable {
-    case logAttempts
-    case lightIt
-
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .logAttempts: "Log attempts"
-        case .lightIt: "Light it"
-        }
-    }
-}
-
 /// App settings, kept in UserDefaults (see CLAUDE.md, Data).
 @Observable
 final class AppSettings {
     enum Keys {
         static let holdSet = "holdSet"
-        static let actionButtonMode = "actionButtonMode"
         static let boardID = "boardID"
         static let boardName = "boardName"
         static let lastExport = "lastExport"
@@ -52,7 +36,6 @@ final class AppSettings {
     @ObservationIgnored let defaults: UserDefaults
 
     var holdSet: HoldSet { didSet { defaults.set(holdSet.rawValue, forKey: Keys.holdSet) } }
-    var actionButtonMode: ActionButtonMode { didSet { defaults.set(actionButtonMode.rawValue, forKey: Keys.actionButtonMode) } }
     /// The saved LED box: Core Bluetooth's identifier for it on this watch.
     var boardID: String? { didSet { defaults.set(boardID, forKey: Keys.boardID) } }
     /// The name the saved box advertised (shows its ID on newer boxes).
@@ -69,7 +52,6 @@ final class AppSettings {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         holdSet = HoldSet(rawValue: defaults.string(forKey: Keys.holdSet) ?? "") ?? .mb2024
-        actionButtonMode = ActionButtonMode(rawValue: defaults.string(forKey: Keys.actionButtonMode) ?? "") ?? .logAttempts
         boardID = defaults.string(forKey: Keys.boardID)
         boardName = defaults.string(forKey: Keys.boardName)
         lastExport = defaults.object(forKey: Keys.lastExport) as? Date
