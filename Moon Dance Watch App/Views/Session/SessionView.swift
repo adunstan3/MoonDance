@@ -190,7 +190,9 @@ private struct SideColumn: View {
     let onStar: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // Grade, tries and star sit together at the top; Light it is raised and
+        // pulled in from the screen's rounded bottom-right corner.
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 5) {
                 Text(problem.grade(scale))
                     .font(.system(size: 30, weight: .heavy, design: .rounded))
@@ -198,9 +200,7 @@ private struct SideColumn: View {
                     .lineLimit(1)
                 if problem.isBenchmark { BenchmarkBadge() }
             }
-            Spacer(minLength: 4)
             attempts
-            Spacer(minLength: 4)
             Label(isProject ? "Project" : "Star", systemImage: isProject ? "star.fill" : "star")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(isProject ? Theme.white : Theme.secondaryText)
@@ -210,8 +210,10 @@ private struct SideColumn: View {
                 .accessibilityAddTraits(.isButton)
                 .accessibilityLabel(isProject ? "Project. Tap to unstar" : "Star as a project")
                 .accessibilityAction { onStar() }
-            Spacer(minLength: 4)
+            Spacer(minLength: 0)
             LightControls(problem: problem)
+                .padding(.trailing, 8)
+                .padding(.bottom, 14)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
