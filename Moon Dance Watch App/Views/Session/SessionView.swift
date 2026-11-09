@@ -100,7 +100,7 @@ struct SessionView: View {
         let isProject = projects.contains { $0.problemId == problem.problemId && $0.holdSet == problem.holdSet }
         // The grid takes the full height on the left; everything else, Light it
         // included, is in the column on the right.
-        return HStack(alignment: .top, spacing: 12) {
+        return HStack(alignment: .top, spacing: 10) {
             HoldGridView(holds: problem.holds)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .accessibilityHint("Turn the Digital Crown for the next problem")
@@ -108,10 +108,10 @@ struct SessionView: View {
                        onAttempt: model.logAttempt, onSent: model.markSent, onStar: model.toggleProject)
                 .frame(width: SideColumn.width)
         }
-        .padding(.top, 10)
-        .padding(.leading, 8)
-        .padding(.trailing, 12)
-        .padding(.bottom, 14)
+        .padding(.top, 8)
+        .padding(.leading, 10)
+        .padding(.trailing, 6)
+        .padding(.bottom, 12)
     }
 
     private var emptyState: some View {
@@ -179,7 +179,7 @@ struct BannerView: View {
 
 /// Grade with the B badge, attempts or Sent, project star, and Light it / Clear.
 private struct SideColumn: View {
-    static let width: CGFloat = 78
+    static let width: CGFloat = 68
 
     let problem: Problem
     let stats: ProblemStats
@@ -223,8 +223,10 @@ private struct SideColumn: View {
                 Label("Sent", systemImage: "checkmark.circle")
                     .font(.headline)
                     .foregroundStyle(Theme.green)
-                Text("\(stats.attempts) attempt\(stats.attempts == 1 ? "" : "s")")
+                Text("\(stats.attempts) \(stats.attempts == 1 ? "try" : "tries")")
                     .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                     .foregroundStyle(Theme.secondaryText)
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 3) {

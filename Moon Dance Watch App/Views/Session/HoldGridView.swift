@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The 11 × 18 board: a dot per position, a colored ring per hold
-/// (green start, blue hand, red finish). Row 18 is at the top.
+/// (green start, blue hand, red finish). Row 18 is at the top. It fills whatever
+/// space it's given, so rows may be spaced a little further apart than columns.
 struct HoldGridView: View {
     let holds: [Hold]
 
@@ -25,7 +26,6 @@ struct HoldGridView: View {
                 context.stroke(Path(ellipseIn: rect), with: .color(Theme.color(for: hold.role)), lineWidth: line)
             }
         }
-        .aspectRatio(CGFloat(GridPosition.columns) / CGFloat(GridPosition.rows), contentMode: .fit)
         .accessibilityElement()
         .accessibilityLabel(accessibilityText)
     }
@@ -38,20 +38,22 @@ struct HoldGridView: View {
     }
 }
 
-/// Grid geometry shared by drawing and tests.
+/// Grid geometry shared by drawing and tests. Columns and rows each spread
+/// across the full width and height.
 nonisolated struct GridLayout {
-    let cell: CGFloat
-    let origin: CGPoint
+    let cellWidth: CGFloat
+    let cellHeight: CGFloat
 
     init(size: CGSize) {
-        let columns = CGFloat(GridPosition.columns)
-        let rows = CGFloat(GridPosition.rows)
-        cell = min(size.width / columns, size.height / rows)
-        origin = CGPoint(x: (size.width - cell * columns) / 2, y: (size.height - cell * rows) / 2)
+        cellWidth = size.width / CGFloat(GridPosition.columns)
+        cellHeight = size.height / CGFloat(GridPosition.rows)
     }
 
+    /// Size used for dots and rings, so they stay round.
+    var cell: CGFloat { min(cellWidth, cellHeight) }
+
     func center(column: Int, row: Int) -> CGPoint {
-        CGPoint(x: origin.x + (CGFloat(column) + 0.5) * cell,
-                y: origin.y + (CGFloat(GridPosition.rows - row) + 0.5) * cell)
+        CGPoint(x: (CGFloat(column) + 0.5) * cellWidth,
+                y: (CGFloat(GridPosition.rows - row) + 0.5) * cellHeight)
     }
 }

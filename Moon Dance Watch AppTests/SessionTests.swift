@@ -136,4 +136,12 @@ struct GridLayoutTests {
         #expect(layout.center(column: 0, row: 18) == CGPoint(x: 5, y: 5))
         #expect(layout.center(column: 10, row: 1) == CGPoint(x: 105, y: 175))
     }
+
+    @Test func gridFillsATallerSpace() {
+        // Rows spread over the full height; rings stay sized by the narrower cell.
+        let layout = GridLayout(size: CGSize(width: 110, height: 216))
+        #expect(layout.cellHeight == 12)
+        #expect(layout.cell == 10)
+        #expect(layout.center(column: 0, row: 1) == CGPoint(x: 5, y: 210))
+    }
 }

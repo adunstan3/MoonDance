@@ -53,7 +53,7 @@ struct LightControls: View {
     private var button: some View {
         switch display {
         case .ready:
-            SessionButton(title: "Light it", systemImage: "lightbulb", style: .filled(Theme.blue)) {
+            SessionButton(title: "Light it", style: .filled(Theme.blue)) {
                 model.lightCurrent()
             }
         case .working:
@@ -65,12 +65,12 @@ struct LightControls: View {
             .overlay(Capsule().strokeBorder(Theme.blue, lineWidth: 2))
             .accessibilityLabel("Working")
         case .lit:
-            SessionButton(title: "Clear", systemImage: "xmark", style: .text(Theme.red)) {
+            SessionButton(title: "Clear", style: .text(Theme.red)) {
                 model.clearBoard()
             }
             .accessibilityLabel("Clear board")
         case .failed:
-            SessionButton(title: "Retry", systemImage: "arrow.clockwise", style: .filled(Theme.blue)) {
+            SessionButton(title: "Retry", style: .filled(Theme.blue)) {
                 model.lightCurrent()
             }
             .accessibilityLabel("Light it failed. Retry")
@@ -108,18 +108,14 @@ private struct SessionButton: View {
     }
 
     let title: String
-    let systemImage: String
     let style: Style
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 3) {
-                Image(systemName: systemImage)
-                Text(title)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
+            Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             .font(.footnote.weight(.bold))
             .frame(maxWidth: .infinity, minHeight: LightControls.buttonHeight)
             .foregroundStyle(foreground)
