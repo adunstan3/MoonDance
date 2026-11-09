@@ -30,8 +30,9 @@ final class SessionModel {
     /// or last-viewed) problem selected when it's still in the list.
     func reload(context: ModelContext, settings: AppSettings, keeping problemID: String? = nil) {
         let keep = problemID ?? current?.problemId ?? settings.defaults.string(forKey: Self.lastProblemKey)
-        problems = Self.fetch(context: context, holdSet: settings.holdSet, vGrade: settings.lastGrade,
-                              benchmarksOnly: settings.benchmarksOnly)
+        let fetched = Self.fetch(context: context, holdSet: settings.holdSet, vGrade: settings.lastGrade,
+                                 benchmarksOnly: settings.benchmarksOnly)
+        problems = Self.pinningProjects(fetched, projects: Self.projectIDs(context: context, holdSet: settings.holdSet))
         index = problems.firstIndex { $0.problemId == keep } ?? 0
         remember(settings: settings)
     }
@@ -84,6 +85,23 @@ final class SessionModel {
         let descriptor = FetchDescriptor(predicate: predicate,
                                          sortBy: [SortDescriptor(\.repeats, order: .reverse), SortDescriptor(\.name)])
         return (try? context.fetch(descriptor)) ?? []
+    }
+
+    /// Starred problems for a hold set, newest star first.
+    static func projectIDs(context: ModelContext, holdSet: HoldSet) -> [String] {
+        let set = holdSet.rawValue
+        let descriptor = FetchDescriptor<Project>(predicate: #Predicate { $0.holdSet == set },
+                                                  sortBy: [SortDescriptor(\.dateAdded, order: .reverse)])
+        return ((try? context.fetch(descriptor)) ?? []).map(\.problemId)
+    }
+
+    /// Projects pinned to the top (newest star first), then everything else in its
+    /// usual order. The list and Crown stepping both use this order.
+    static func pinningProjects(_ problems: [Problem], projects: [String]) -> [Problem] {
+        let rank = Dictionary(projects.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        let pinned = problems.filter { rank[$0.problemId] != nil }
+            .sorted { rank[$0.problemId]! < rank[$1.problemId]! }
+        return pinned + problems.filter { rank[$0.problemId] == nil }
     }
 
     static func problem(id: String, context: ModelContext) -> Problem? {

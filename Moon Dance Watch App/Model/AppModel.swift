@@ -106,9 +106,11 @@ final class AppModel {
         WKInterfaceDevice.current().play(.directionDown)
     }
 
+    /// Stars or unstars the current problem; starred problems pin to the top of the list.
     func toggleProject() {
         guard let problem = currentProblem else { return }
         Logbook.toggleProject(problem, in: context)
+        session.reload(context: context, settings: settings, keeping: problem.problemId)
     }
 
     // MARK: - Board

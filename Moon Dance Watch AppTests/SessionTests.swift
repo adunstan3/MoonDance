@@ -45,6 +45,20 @@ struct SessionTests {
         #expect(session.problems.map(\.problemId) == ["e"])
     }
 
+    @Test func starredProblemsArePinnedToTheTop() throws {
+        let context = container.mainContext
+        context.insert(Project(problemId: "c", holdSet: "2024", dateAdded: Date(timeIntervalSince1970: 100)))
+        context.insert(Project(problemId: "a", holdSet: "2024", dateAdded: Date(timeIntervalSince1970: 200)))
+        // A star on the other hold set doesn't pin anything here.
+        context.insert(Project(problemId: "b", holdSet: "2016"))
+        try context.save()
+        let session = SessionModel()
+        settings.lastGrade = 5
+        session.reload(context: context, settings: settings)
+        // Newest star first, then the rest by repeats.
+        #expect(session.problems.map(\.problemId) == ["a", "c", "b"])
+    }
+
     @Test func crownSteppingIsClamped() {
         let session = SessionModel()
         settings.lastGrade = 5

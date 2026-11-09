@@ -67,6 +67,17 @@ struct LoggingTests {
         #expect(entry.date >= before)
     }
 
+    @Test func starringPinsTheProblemAndKeepsItOnScreen() {
+        model.session.step(by: 1, settings: model.settings)
+        #expect(current.problemId == "p2")
+        model.toggleProject()
+        #expect(model.session.problems.map(\.problemId) == ["p2", "p1"])
+        #expect(current.problemId == "p2")
+        model.toggleProject()
+        #expect(model.session.problems.map(\.problemId) == ["p1", "p2"])
+        #expect(current.problemId == "p2")
+    }
+
     @Test func starTogglesAndSurvivesASend() {
         model.toggleProject()
         #expect(Logbook.isProject(current, in: model.context))

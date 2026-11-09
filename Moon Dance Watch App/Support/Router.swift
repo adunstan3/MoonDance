@@ -11,10 +11,9 @@ enum Route: Hashable {
     case export
 }
 
-/// The swipeable pages. Session is home; Projects and History are a swipe left.
+/// The swipeable pages. Session is home; History and Settings are a swipe left.
 enum Page: Hashable {
     case session
-    case projects
     case history
     case settings
 }

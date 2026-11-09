@@ -179,7 +179,7 @@ struct BannerView: View {
 
 /// Grade with the B badge, attempts or Sent, project star, and Light it / Clear.
 private struct SideColumn: View {
-    static let width: CGFloat = 68
+    static let width: CGFloat = 74
 
     let problem: Problem
     let stats: ProblemStats
@@ -201,8 +201,12 @@ private struct SideColumn: View {
                 if problem.isBenchmark { BenchmarkBadge() }
             }
             attempts
-            Label(isProject ? "Project" : "Star", systemImage: isProject ? "star.fill" : "star")
-                .font(.footnote.weight(.semibold))
+            HStack(spacing: 5) {
+                Image(systemName: isProject ? "star.fill" : "star")
+                    .font(.system(size: 21, weight: .semibold))
+                Text(isProject ? "Project" : "Star")
+                    .font(.footnote.weight(.semibold))
+            }
                 .foregroundStyle(isProject ? Theme.white : Theme.secondaryText)
                 .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
                 .contentShape(Rectangle())
@@ -212,7 +216,7 @@ private struct SideColumn: View {
                 .accessibilityAction { onStar() }
             Spacer(minLength: 0)
             LightControls(problem: problem)
-                .padding(.trailing, 8)
+                .padding(.trailing, 6)
                 .padding(.bottom, 14)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)

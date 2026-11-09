@@ -16,8 +16,6 @@ struct MainView: View {
             TabView(selection: $router.page) {
                 SessionView()
                     .tag(Page.session)
-                ProjectsView()
-                    .tag(Page.projects)
                 HistoryView()
                     .tag(Page.history)
                 SettingsView()
@@ -63,7 +61,7 @@ struct MainView: View {
     }
 
     /// DEBUG launch arguments for screenshots:
-    /// `-openScreen list|grade|log|settings|find|export`, `-page projects|history|settings`,
+    /// `-openScreen list|grade|log|settings|find|export`, `-page history|settings`,
     /// `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent`, `-demoLogs YES`.
     private func applyDebugLaunchArguments() {
         #if DEBUG
@@ -90,7 +88,6 @@ struct MainView: View {
         }
         #endif
         switch RuntimeEnvironment.debugValue("page") {
-        case "projects": router.page = .projects
         case "history": router.page = .history
         case "settings": router.page = .settings
         default: break

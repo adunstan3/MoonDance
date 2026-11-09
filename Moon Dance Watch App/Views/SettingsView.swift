@@ -16,7 +16,6 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 SectionLabel(text: "Hold set")
                 SegmentedControl(options: HoldSet.allCases, selection: $settings.holdSet) { $0.label }
-                Caption("Match whatever is on the wall at Rocky Top")
 
                 SectionLabel(text: "Grades").padding(.top, 6)
                 SegmentedControl(options: GradeScale.allCases, selection: $settings.gradeScale) { $0.label }
