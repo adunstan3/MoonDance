@@ -106,6 +106,14 @@ struct SnapshotTests {
         #expect(lowest == Grades.range.lowerBound)
     }
 
+    @Test func gradeScaleNames() {
+        #expect(Grades.name(vGrade: 5, font: "6C+", scale: .v) == "V5")
+        #expect(Grades.name(vGrade: 5, font: "6C+", scale: .font) == "6C+")
+        #expect(Grades.bucketName(4, scale: .v) == "V4")
+        #expect(Grades.bucketName(4, scale: .font) == "6B / 6B+")
+        #expect(Grades.bucketName(6, scale: .font) == "7A")
+    }
+
     @Test func gradeLabels() {
         #expect(Grades.label(vGrade: 5, font: "6C+") == "V5 · 6C+")
         #expect(Grades.fontRange(5) == "6C / 6C+")

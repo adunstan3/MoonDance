@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The bottom of Session: Light it, or the Lit / connecting / failed state with Clear.
+/// Bottom of the Session side column: a status line (dot + word, so it reads in
+/// glare) over one button that is Light it, then Clear once the problem is lit.
 struct LightControls: View {
     let problem: Problem
 
@@ -15,55 +16,65 @@ struct LightControls: View {
         case failed
     }
 
-    /// Height of full-width buttons elsewhere (Done, Use this board, Export).
+    /// Height of full-width buttons elsewhere (Use this board, Export).
     static let height: CGFloat = 42
-    /// The Session screen's bottom row is a little shorter so it clears the rounded corners.
-    static let buttonHeight: CGFloat = 36
+    /// The Session button.
+    static let buttonHeight: CGFloat = 40
 
     var body: some View {
-        switch display {
-        case .ready:
-            Button { model.lightCurrent() } label: {
-                Label("Light it", systemImage: "lightbulb")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: Self.buttonHeight)
-                    .background(Theme.blue, in: Capsule())
-                    .foregroundStyle(.white)
-            }
-            .buttonStyle(.plain)
-        case .working(let text):
-            StatusCapsule(color: Theme.blue, text: text)
-                .accessibilityLabel(text)
-        case .lit:
-            HStack(spacing: 6) {
-                StatusCapsule(color: Theme.green, text: "Lit")
-                    .accessibilityLabel("Lit on the board")
-                clearButton
-                    .frame(maxWidth: 70)
-            }
-        case .failed:
-            HStack(spacing: 6) {
-                Button { model.lightCurrent() } label: {
-                    StatusCapsule(color: Theme.red, text: "Retry")
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Light it failed. Retry")
-                clearButton
-                    .frame(maxWidth: 70)
-            }
+        VStack(alignment: .leading, spacing: 4) {
+            statusLine
+            button
         }
     }
 
-    private var clearButton: some View {
-        Button { model.clearBoard() } label: {
-            Text("Clear")
-                .font(.headline)
-                .foregroundStyle(Theme.red)
-                .frame(maxWidth: .infinity, minHeight: Self.buttonHeight)
-                .background(Theme.card, in: Capsule())
+    /// Gray idle (hidden), blue connecting, green lit, red failed.
+    @ViewBuilder
+    private var statusLine: some View {
+        let (color, text): (Color, String) = switch display {
+        case .ready: (Theme.idle, "Ready")
+        case .working(let text): (Theme.blue, text)
+        case .lit: (Theme.green, "Lit")
+        case .failed: (Theme.red, "Failed")
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Clear board")
+        HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 7, height: 7)
+            Text(text)
+                .font(.caption2.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+        }
+        .foregroundStyle(color)
+        .opacity(display == .ready ? 0 : 1)
+        .accessibilityHidden(display == .ready)
+    }
+
+    @ViewBuilder
+    private var button: some View {
+        switch display {
+        case .ready:
+            SessionButton(title: "Light it", systemImage: "lightbulb", style: .filled(Theme.blue)) {
+                model.lightCurrent()
+            }
+        case .working:
+            HStack {
+                ProgressView()
+                    .tint(Theme.blue)
+            }
+            .frame(maxWidth: .infinity, minHeight: Self.buttonHeight)
+            .overlay(Capsule().strokeBorder(Theme.blue, lineWidth: 2))
+            .accessibilityLabel("Working")
+        case .lit:
+            SessionButton(title: "Clear", systemImage: "xmark", style: .text(Theme.red)) {
+                model.clearBoard()
+            }
+            .accessibilityLabel("Clear board")
+        case .failed:
+            SessionButton(title: "Retry", systemImage: "arrow.clockwise", style: .filled(Theme.blue)) {
+                model.lightCurrent()
+            }
+            .accessibilityLabel("Light it failed. Retry")
+        }
     }
 
     /// What to show, from the board's status and which problem was lit last.
@@ -89,19 +100,46 @@ struct LightControls: View {
     }
 }
 
-/// An outlined capsule with a status dot: "● Lit", "● Connecting…".
-struct StatusCapsule: View {
-    let color: Color
-    let text: String
+/// The capsule button in the Session side column.
+private struct SessionButton: View {
+    enum Style {
+        case filled(Color)
+        case text(Color)
+    }
+
+    let title: String
+    let systemImage: String
+    let style: Style
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            Circle().fill(color).frame(width: 9, height: 9)
-            Text(text).font(.headline)
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: systemImage)
+                Text(title)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .font(.footnote.weight(.bold))
+            .frame(maxWidth: .infinity, minHeight: LightControls.buttonHeight)
+            .foregroundStyle(foreground)
+            .background(background, in: Capsule())
+            .contentShape(Capsule())
         }
-        .foregroundStyle(color)
-        .frame(maxWidth: .infinity, minHeight: LightControls.buttonHeight)
-        .overlay(Capsule().strokeBorder(color, lineWidth: 2.5))
-        .contentShape(Capsule())
+        .buttonStyle(.plain)
+    }
+
+    private var foreground: Color {
+        switch style {
+        case .filled: .white
+        case .text(let color): color
+        }
+    }
+
+    private var background: Color {
+        switch style {
+        case .filled(let color): color
+        case .text: Theme.card
+        }
     }
 }

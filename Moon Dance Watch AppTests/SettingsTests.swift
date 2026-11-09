@@ -18,6 +18,13 @@ struct SettingsTests {
         #expect(!settings.benchmarksOnly)
         #expect(!settings.hasSavedBoard)
         #expect(settings.lastExport == nil)
+        #expect(settings.gradeScale == .v)
+    }
+
+    @Test func gradeScalePersists() throws {
+        let defaults = try freshDefaults()
+        AppSettings(defaults: defaults).gradeScale = .font
+        #expect(AppSettings(defaults: defaults).gradeScale == .font)
     }
 
     @Test func settingsPersist() throws {

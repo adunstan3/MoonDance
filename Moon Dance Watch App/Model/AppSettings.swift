@@ -27,6 +27,7 @@ final class AppSettings {
         static let lastExport = "lastExport"
         static let lastGrade = "lastGrade"
         static let benchmarksOnly = "benchmarksOnly"
+        static let gradeScale = "gradeScale"
         static let bleFlags = "bleFlags"
         static let showAllDevices = "showAllDevices"
     }
@@ -44,6 +45,8 @@ final class AppSettings {
     /// Last V grade picked in the grade picker (V5 on first launch).
     var lastGrade: Int { didSet { defaults.set(lastGrade, forKey: Keys.lastGrade) } }
     var benchmarksOnly: Bool { didSet { defaults.set(benchmarksOnly, forKey: Keys.benchmarksOnly) } }
+    /// Show grades as V ("V5") or Font ("6C+").
+    var gradeScale: GradeScale { didSet { defaults.set(gradeScale.rawValue, forKey: Keys.gradeScale) } }
     /// Optional flags packet sent before each problem (e.g. "D"). Empty by default.
     var bleFlags: String { didSet { defaults.set(bleFlags, forKey: Keys.bleFlags) } }
     /// Bluetooth log option: list every device during a scan, not only LED boxes.
@@ -58,6 +61,7 @@ final class AppSettings {
         let savedGrade = defaults.object(forKey: Keys.lastGrade) as? Int ?? Self.defaultGrade
         lastGrade = Grades.range.contains(savedGrade) ? savedGrade : Self.defaultGrade
         benchmarksOnly = defaults.bool(forKey: Keys.benchmarksOnly)
+        gradeScale = GradeScale(rawValue: defaults.string(forKey: Keys.gradeScale) ?? "") ?? .v
         bleFlags = defaults.string(forKey: Keys.bleFlags) ?? ""
         showAllDevices = defaults.bool(forKey: Keys.showAllDevices)
     }

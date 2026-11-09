@@ -53,12 +53,13 @@ struct HistoryView: View {
 private struct HistoryRow: View {
     let problem: Problem
     let day: History.ProblemDay
+    @Environment(AppSettings.self) private var settings
 
     var body: some View {
         HStack(spacing: 6) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(problem.name).font(.headline).lineLimit(2)
-                Text("\(Grades.vName(problem.vGrade)) · \(day.attempts) attempt\(day.attempts == 1 ? "" : "s")")
+                Text("\(problem.grade(settings.gradeScale)) · \(day.attempts) attempt\(day.attempts == 1 ? "" : "s")")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
             }

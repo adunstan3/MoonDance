@@ -98,21 +98,20 @@ struct SessionView: View {
     private func content(for problem: Problem) -> some View {
         let stats = LogStats(entries: logs, holdSet: problem.holdSet)[problem.problemId]
         let isProject = projects.contains { $0.problemId == problem.problemId && $0.holdSet == problem.holdSet }
-        return VStack(spacing: 8) {
-            HStack(alignment: .top, spacing: 14) {
-                HoldGridView(holds: problem.holds)
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .layoutPriority(1)
-                    .accessibilityHint("Turn the Digital Crown for the next problem")
-                SideColumn(problem: problem, stats: stats, isProject: isProject,
-                           onAttempt: model.logAttempt, onSent: model.markSent, onStar: model.toggleProject)
-            }
-            .padding(.top, 10)
-            .padding(.horizontal, 6)
-            LightControls(problem: problem)
-                .padding(.horizontal, 10)
-                .padding(.bottom, 8)
+        // The grid takes the full height on the left; everything else, Light it
+        // included, is in the column on the right.
+        return HStack(alignment: .top, spacing: 12) {
+            HoldGridView(holds: problem.holds)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .accessibilityHint("Turn the Digital Crown for the next problem")
+            SideColumn(problem: problem, stats: stats, isProject: isProject, scale: settings.gradeScale,
+                       onAttempt: model.logAttempt, onSent: model.markSent, onStar: model.toggleProject)
+                .frame(width: SideColumn.width)
         }
+        .padding(.top, 10)
+        .padding(.leading, 8)
+        .padding(.trailing, 12)
+        .padding(.bottom, 14)
     }
 
     private var emptyState: some View {
@@ -120,7 +119,7 @@ struct SessionView: View {
             Image(systemName: "list.bullet")
                 .font(.title2)
                 .foregroundStyle(Theme.blue)
-            Text("No \(Grades.vName(settings.lastGrade))\(settings.benchmarksOnly ? " benchmarks" : " problems") for \(settings.holdSet.label)")
+            Text("No \(Grades.bucketName(settings.lastGrade, scale: settings.gradeScale))\(settings.benchmarksOnly ? " benchmarks" : " problems") for \(settings.holdSet.label)")
                 .multilineTextAlignment(.center)
             Button("Pick a grade") { router.push(.gradePicker) }
                 .tint(Theme.blue)
@@ -178,25 +177,25 @@ struct BannerView: View {
     }
 }
 
-/// Grade, B badge, attempts or Sent, project star, list position.
+/// Grade with the B badge, attempts or Sent, project star, and Light it / Clear.
 private struct SideColumn: View {
+    static let width: CGFloat = 78
+
     let problem: Problem
     let stats: ProblemStats
     let isProject: Bool
+    let scale: GradeScale
     let onAttempt: () -> Void
     let onSent: () -> Void
     let onStar: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(Grades.vName(problem.vGrade))
-                .font(.system(size: 34, weight: .heavy, design: .rounded))
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-            HStack(spacing: 5) {
-                Text(problem.fontGrade)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText)
+            HStack(alignment: .center, spacing: 5) {
+                Text(problem.grade(scale))
+                    .font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
                 if problem.isBenchmark { BenchmarkBadge() }
             }
             Spacer(minLength: 4)
@@ -212,6 +211,7 @@ private struct SideColumn: View {
                 .accessibilityLabel(isProject ? "Project. Tap to unstar" : "Star as a project")
                 .accessibilityAction { onStar() }
             Spacer(minLength: 4)
+            LightControls(problem: problem)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }

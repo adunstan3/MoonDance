@@ -31,8 +31,10 @@ final class Problem {
         self.holds = holds
     }
 
-    /// "V5 · 6C+"
-    var gradeLabel: String { Grades.label(vGrade: vGrade, font: fontGrade) }
+    /// "V5" or "6C+", per the Grades setting.
+    func grade(_ scale: GradeScale) -> String {
+        Grades.name(vGrade: vGrade, font: fontGrade, scale: scale)
+    }
 }
 
 /// One attempt or send. A send also counts as an attempt.

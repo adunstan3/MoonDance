@@ -16,10 +16,11 @@ struct BenchmarkBadge: View {
 /// "V5 · 6C+ [B]" as used in list rows.
 struct GradeLine: View {
     let problem: Problem
+    @Environment(AppSettings.self) private var settings
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(problem.gradeLabel)
+            Text(problem.grade(settings.gradeScale))
                 .foregroundStyle(Theme.secondaryText)
             if problem.isBenchmark {
                 BenchmarkBadge()
@@ -73,6 +74,8 @@ struct Chip: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             if let systemImage {
                 Image(systemName: systemImage).font(.caption2.weight(.bold))
             }

@@ -1,5 +1,21 @@
 import Foundation
 
+/// How grades are shown: V scale ("V5") or Font ("6C+"). A setting.
+nonisolated enum GradeScale: String, CaseIterable, Identifiable, Sendable {
+    case v
+    case font
+
+    var id: String { rawValue }
+
+    /// Label in Settings.
+    var label: String {
+        switch self {
+        case .v: "V4"
+        case .font: "6B+"
+        }
+    }
+}
+
 /// V grades and the Font grades MoonBoard uses for them.
 /// Must match FONT_TO_V in tools/build_problems.py.
 nonisolated enum Grades {
@@ -34,6 +50,16 @@ nonisolated enum Grades {
 
     /// "V5 · 6C+"
     static func label(vGrade: Int, font: String) -> String { "\(vName(vGrade)) · \(font)" }
+
+    /// One problem's grade in the chosen scale: "V5" or "6C+".
+    static func name(vGrade: Int, font: String, scale: GradeScale) -> String {
+        scale == .v ? vName(vGrade) : font
+    }
+
+    /// A picker/list bucket in the chosen scale: "V5" or "6C / 6C+".
+    static func bucketName(_ vGrade: Int, scale: GradeScale) -> String {
+        scale == .v ? vName(vGrade) : fontRange(vGrade)
+    }
 
     static func vGrade(forFont font: String) -> Int? {
         fontByV.first { $0.value.contains(font) }?.key

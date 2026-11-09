@@ -60,12 +60,13 @@ struct ProblemListView: View {
                 .accessibilityAddTraits(.isButton)
                 .accessibilityLabel("Hold set \(settings.holdSet.label). Opens Settings")
                 .accessibilityAction { router.push(.settings) }
-            Chip(text: Grades.vName(settings.lastGrade) + (settings.benchmarksOnly ? " · B" : ""),
+            Chip(text: Grades.bucketName(settings.lastGrade, scale: settings.gradeScale)
+                    + (settings.benchmarksOnly ? " · B" : ""),
                  systemImage: "chevron.down")
                 .contentShape(Capsule())
                 .onTapGesture { router.push(.gradePicker) }
                 .accessibilityAddTraits(.isButton)
-                .accessibilityLabel("Grade \(Grades.vName(settings.lastGrade)). Opens the grade picker")
+                .accessibilityLabel("Grade \(Grades.bucketName(settings.lastGrade, scale: settings.gradeScale)). Opens the grade picker")
                 .accessibilityAction { router.push(.gradePicker) }
             Spacer(minLength: 0)
         }

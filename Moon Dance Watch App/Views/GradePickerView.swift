@@ -10,14 +10,9 @@ struct GradePickerView: View {
         VStack(spacing: 10) {
             Picker("Grade", selection: $settings.lastGrade) {
                 ForEach(Array(Grades.range), id: \.self) { vGrade in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(Grades.vName(vGrade))
-                            .font(.system(.title2, design: .rounded, weight: .heavy))
-                        Text(Grades.fontRange(vGrade))
-                            .font(.footnote.weight(.semibold))
-                    }
-                    .tag(vGrade)
-                    .accessibilityLabel("\(Grades.vName(vGrade)), Font \(Grades.fontRange(vGrade))")
+                    Text(Grades.bucketName(vGrade, scale: settings.gradeScale))
+                        .font(.system(.title2, design: .rounded, weight: .heavy))
+                        .tag(vGrade)
                 }
             }
             .pickerStyle(.wheel)
