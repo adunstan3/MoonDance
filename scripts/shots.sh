@@ -3,8 +3,7 @@
 # Usage: scripts/shots.sh OUT_DIR name "launch args" [name "launch args"]...
 set -euo pipefail
 OUT="$1"; shift
-SIM_NAME="${SIM_NAME:-Apple Watch Ultra 4 (49mm)}"
-SIM_ID=$(xcrun simctl list devices available | grep -F "$SIM_NAME (" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
+SIM_ID=$("$(dirname "$0")/sim.sh")
 BUNDLE_ID="com.andrewdunstan.Moondance.watchkitapp"
 while [ $# -ge 2 ]; do
   NAME="$1"; ARGS="$2"; shift 2

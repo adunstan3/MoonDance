@@ -73,7 +73,8 @@ final class AppSettings {
         boardID = defaults.string(forKey: Keys.boardID)
         boardName = defaults.string(forKey: Keys.boardName)
         lastExport = defaults.object(forKey: Keys.lastExport) as? Date
-        lastGrade = defaults.object(forKey: Keys.lastGrade) as? Int ?? Self.defaultGrade
+        let savedGrade = defaults.object(forKey: Keys.lastGrade) as? Int ?? Self.defaultGrade
+        lastGrade = Grades.range.contains(savedGrade) ? savedGrade : Self.defaultGrade
         benchmarksOnly = defaults.bool(forKey: Keys.benchmarksOnly)
         bleFlags = defaults.string(forKey: Keys.bleFlags) ?? ""
         showAllDevices = defaults.bool(forKey: Keys.showAllDevices)

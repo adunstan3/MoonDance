@@ -4,11 +4,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-SIM_NAME="${SIM_NAME:-Apple Watch Ultra 4 (49mm)}"
 DERIVED="${DERIVED:-build/DerivedData}"
 BUNDLE_ID="com.andrewdunstan.Moondance.watchkitapp"
-SIM_ID=$(xcrun simctl list devices available | grep -F "$SIM_NAME (" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')
-xcrun simctl bootstatus "$SIM_ID" -b > /dev/null
+SIM_ID=$("$(dirname "$0")/sim.sh")
 
 SHOT=""
 if [ $# -gt 0 ] && [[ "$1" == *.png ]]; then

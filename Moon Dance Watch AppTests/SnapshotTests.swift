@@ -100,6 +100,12 @@ struct SnapshotTests {
         #expect(defaults.string(forKey: SnapshotLoader.versionKey) == nil)
     }
 
+    @Test func pickerStartsAtV4BecauseTheDatasetDoes() throws {
+        #expect(Grades.range == 4...14)
+        let lowest = try bundled().problems.map(\.vGrade).min()
+        #expect(lowest == Grades.range.lowerBound)
+    }
+
     @Test func gradeLabels() {
         #expect(Grades.label(vGrade: 5, font: "6C+") == "V5 · 6C+")
         #expect(Grades.fontRange(5) == "6C / 6C+")

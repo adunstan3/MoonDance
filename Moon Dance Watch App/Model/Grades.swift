@@ -3,7 +3,9 @@ import Foundation
 /// V grades and the Font grades MoonBoard uses for them.
 /// Must match FONT_TO_V in tools/build_problems.py.
 nonisolated enum Grades {
-    static let range = 0...14
+    /// Grades offered in the picker. The dataset starts at 6B (V4) on both 40°
+    /// hold sets, so V0–V3 would always be empty.
+    static let range = 4...14
 
     static let fontByV: [Int: [String]] = [
         0: ["4", "4+"],

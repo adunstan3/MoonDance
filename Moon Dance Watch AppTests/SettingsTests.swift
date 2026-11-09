@@ -40,6 +40,12 @@ struct SettingsTests {
         #expect(reloaded.lastExport == date)
     }
 
+    @Test func savedGradeOutsideThePickerFallsBackToV5() throws {
+        let defaults = try freshDefaults()
+        defaults.set(2, forKey: AppSettings.Keys.lastGrade)
+        #expect(AppSettings(defaults: defaults).lastGrade == 5)
+    }
+
     @Test func forgetBoardClearsIt() throws {
         let defaults = try freshDefaults()
         let settings = AppSettings(defaults: defaults)
