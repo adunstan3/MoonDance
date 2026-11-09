@@ -20,7 +20,7 @@ struct SettingsView: View {
 
                 SectionLabel(text: "Grades").padding(.top, 6)
                 SegmentedControl(options: GradeScale.allCases, selection: $settings.gradeScale) { $0.label }
-                Caption(settings.gradeScale == .v ? "V scale, e.g. V5" : "Font scale, e.g. 6C+")
+                Caption(settings.gradeScale == .v ? "Grades like V5" : "Grades like 6C+")
 
                 SectionLabel(text: "Board").padding(.top, 6)
                 if settings.hasSavedBoard {

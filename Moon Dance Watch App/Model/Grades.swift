@@ -10,8 +10,8 @@ nonisolated enum GradeScale: String, CaseIterable, Identifiable, Sendable {
     /// Label in Settings.
     var label: String {
         switch self {
-        case .v: "V4"
-        case .font: "6B+"
+        case .v: "V-Scale"
+        case .font: "Font"
         }
     }
 }
