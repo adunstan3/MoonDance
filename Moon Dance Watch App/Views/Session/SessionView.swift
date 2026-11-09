@@ -28,20 +28,21 @@ struct SessionView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Group {
-                if let problem = session.current {
-                    content(for: problem)
-                } else {
-                    emptyState
+        Group {
+            if let problem = session.current {
+                content(for: problem)
+            } else {
+                VStack(spacing: 0) {
+                    header
+                    emptyState.frame(maxHeight: .infinity)
                 }
             }
-            .overlay(alignment: .top) {
-                if let current = banner.current {
-                    BannerView(banner: current) { model.undoBanner() }
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
+        }
+        .overlay(alignment: .top) {
+            if let current = banner.current {
+                BannerView(banner: current) { model.undoBanner() }
+                    .padding(.top, Header.top + Header.height + 4)
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .ignoresSafeArea(edges: [.top, .bottom])
@@ -51,7 +52,7 @@ struct SessionView: View {
         .focused($crownFocused)
         .focusEffectDisabled()
         .digitalCrownRotation($crown, from: 0, through: Double(max(session.problems.count - 1, 1)), by: 1,
-                              sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+                              sensitivity: .high, isContinuous: false, isHapticFeedbackEnabled: true)
         .onChange(of: crown) { _, value in
             session.select(index: Int(value.rounded()), settings: settings)
         }
@@ -67,48 +68,64 @@ struct SessionView: View {
         .onAppear { crownFocused = true }
     }
 
+    private var chevron: Text {
+        Text(Image(systemName: "chevron.down"))
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(Theme.secondaryText)
+    }
+
     /// The problem name on the clock's line; tapping it opens the problem list.
+    /// Header for the empty state: the name button beside the clock.
     private var header: some View {
         HStack(spacing: 0) {
-            Button {
-                router.push(.problemList)
-            } label: {
-                HStack(spacing: 3) {
-                    Text(session.current?.name ?? "Problems")
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .foregroundStyle(Theme.white)
-                    Image(systemName: "chevron.down")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Theme.secondaryText)
-                }
-                .font(.headline)
-                .frame(maxHeight: .infinity)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Opens the problem list")
+            nameButton
             Spacer(minLength: Header.clockWidth)
         }
-        .frame(height: Header.height)
         .padding(.top, Header.top)
         .padding(.leading, Header.leading)
+    }
+
+    /// The problem name, starting on the clock's line. Long names wrap (up to three
+    /// lines) above the grid, which shrinks to fit; the chevron follows the last word.
+    private var nameButton: some View {
+        Button {
+            router.push(.problemList)
+        } label: {
+            Text("\(session.current?.name ?? "Problems") \(chevron)")
+                .foregroundStyle(Theme.white)
+                .font(.headline)
+                .lineLimit(3)
+                .minimumScaleFactor(0.85)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: Header.height, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("problemName")
+        .accessibilityHint("Opens the problem list")
     }
 
     private func content(for problem: Problem) -> some View {
         let stats = LogStats(entries: logs, holdSet: problem.holdSet)[problem.problemId]
         let isProject = projects.contains { $0.problemId == problem.problemId && $0.holdSet == problem.holdSet }
-        // The grid takes the full height on the left; everything else, Light it
-        // included, is in the column on the right.
+        // Left: the name, then the grid filling the rest of the height (a long name
+        // takes room from the grid only). Right: everything else, starting under
+        // the clock, with Light it at the bottom.
         return HStack(alignment: .top, spacing: 10) {
-            HoldGridView(holds: problem.holds)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .accessibilityHint("Turn the Digital Crown for the next problem")
+            VStack(alignment: .leading, spacing: 8) {
+                nameButton
+                    .padding(.leading, Header.leading - 10)
+                HoldGridView(holds: problem.holds)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .accessibilityHint("Turn the Digital Crown for the next problem")
+            }
             SideColumn(problem: problem, stats: stats, isProject: isProject, scale: settings.gradeScale,
                        onAttempt: model.logAttempt, onSent: model.markSent, onStar: model.toggleProject)
                 .frame(width: SideColumn.width)
+                .padding(.top, Header.height + 8)
         }
-        .padding(.top, 8)
+        .padding(.top, Header.top)
         .padding(.leading, 10)
         .padding(.trailing, 6)
         .padding(.bottom, 12)
@@ -204,8 +221,9 @@ private struct SideColumn: View {
             HStack(spacing: 5) {
                 Image(systemName: isProject ? "star.fill" : "star")
                     .font(.system(size: 21, weight: .semibold))
-                Text(isProject ? "Project" : "Star")
+                Text("Star")
                     .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
             }
                 .foregroundStyle(isProject ? Theme.white : Theme.secondaryText)
                 .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
