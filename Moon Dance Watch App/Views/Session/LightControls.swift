@@ -15,7 +15,10 @@ struct LightControls: View {
         case failed
     }
 
+    /// Height of full-width buttons elsewhere (Done, Use this board, Export).
     static let height: CGFloat = 42
+    /// The Session screen's bottom row is a little shorter so it clears the rounded corners.
+    static let buttonHeight: CGFloat = 36
 
     var body: some View {
         switch display {
@@ -23,7 +26,7 @@ struct LightControls: View {
             Button { model.lightCurrent() } label: {
                 Label("Light it", systemImage: "lightbulb")
                     .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: Self.height)
+                    .frame(maxWidth: .infinity, minHeight: Self.buttonHeight)
                     .background(Theme.blue, in: Capsule())
                     .foregroundStyle(.white)
             }
@@ -56,7 +59,7 @@ struct LightControls: View {
             Text("Clear")
                 .font(.headline)
                 .foregroundStyle(Theme.red)
-                .frame(maxWidth: .infinity, minHeight: Self.height)
+                .frame(maxWidth: .infinity, minHeight: Self.buttonHeight)
                 .background(Theme.card, in: Capsule())
         }
         .buttonStyle(.plain)
@@ -97,7 +100,7 @@ struct StatusCapsule: View {
             Text(text).font(.headline)
         }
         .foregroundStyle(color)
-        .frame(maxWidth: .infinity, minHeight: LightControls.height)
+        .frame(maxWidth: .infinity, minHeight: LightControls.buttonHeight)
         .overlay(Capsule().strokeBorder(color, lineWidth: 2.5))
         .contentShape(Capsule())
     }

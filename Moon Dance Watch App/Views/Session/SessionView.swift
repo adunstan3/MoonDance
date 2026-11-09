@@ -18,26 +18,35 @@ struct SessionView: View {
     @State private var crown: Double = 0
     @FocusState private var crownFocused: Bool
 
+    /// Layout of the custom header, which sits on the same line as the system clock.
+    enum Header {
+        static let top: CGFloat = 16
+        static let height: CGFloat = 24
+        static let leading: CGFloat = 16
+        /// Room left for the clock at the top right.
+        static let clockWidth: CGFloat = 62
+    }
+
     var body: some View {
-        Group {
-            if let problem = session.current {
-                content(for: problem)
-            } else {
-                emptyState
+        VStack(spacing: 0) {
+            header
+            Group {
+                if let problem = session.current {
+                    content(for: problem)
+                } else {
+                    emptyState
+                }
+            }
+            .overlay(alignment: .top) {
+                if let current = banner.current {
+                    BannerView(banner: current) { model.undoBanner() }
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
         }
-        .overlay(alignment: .top) {
-            if let current = banner.current {
-                BannerView(banner: current) { model.undoBanner() }
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
+        .ignoresSafeArea(edges: [.top, .bottom])
+        .toolbar(.hidden, for: .navigationBar)
         .animation(.snappy, value: banner.current)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                nameButton
-            }
-        }
         .focusable()
         .focused($crownFocused)
         .focusEffectDisabled()
@@ -58,40 +67,52 @@ struct SessionView: View {
         .onAppear { crownFocused = true }
     }
 
-    private var nameButton: some View {
-        Button {
-            router.push(.problemList)
-        } label: {
-            HStack(spacing: 3) {
-                Text(session.current?.name ?? "Problems")
-                    .lineLimit(1)
-                    .foregroundStyle(Theme.white)
-                Image(systemName: "chevron.down")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Theme.secondaryText)
+    /// The problem name on the clock's line; tapping it opens the problem list.
+    private var header: some View {
+        HStack(spacing: 0) {
+            Button {
+                router.push(.problemList)
+            } label: {
+                HStack(spacing: 3) {
+                    Text(session.current?.name ?? "Problems")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .foregroundStyle(Theme.white)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.secondaryText)
+                }
+                .font(.headline)
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
             }
-            .font(.headline)
-            .textCase(nil)
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the problem list")
+            Spacer(minLength: Header.clockWidth)
         }
-        .buttonStyle(.plain)
-        .accessibilityHint("Opens the problem list")
+        .frame(height: Header.height)
+        .padding(.top, Header.top)
+        .padding(.leading, Header.leading)
     }
 
     private func content(for problem: Problem) -> some View {
         let stats = LogStats(entries: logs, holdSet: problem.holdSet)[problem.problemId]
         let isProject = projects.contains { $0.problemId == problem.problemId && $0.holdSet == problem.holdSet }
-        return VStack(spacing: 6) {
-            HStack(alignment: .top, spacing: 8) {
+        return VStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 14) {
                 HoldGridView(holds: problem.holds)
                     .frame(maxHeight: .infinity, alignment: .top)
                     .layoutPriority(1)
-                SideColumn(problem: problem, stats: stats, isProject: isProject, position: session.positionText,
+                    .accessibilityHint("Turn the Digital Crown for the next problem")
+                SideColumn(problem: problem, stats: stats, isProject: isProject,
                            onAttempt: model.logAttempt, onSent: model.markSent, onStar: model.toggleProject)
             }
+            .padding(.top, 10)
+            .padding(.horizontal, 6)
             LightControls(problem: problem)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 8)
         }
-        .padding(.horizontal, 2)
-        .ignoresSafeArea(edges: .bottom)
     }
 
     private var emptyState: some View {
@@ -121,7 +142,7 @@ struct BannerView: View {
             }
             Text(banner.text)
                 .font(.footnote.weight(.bold))
-                .lineLimit(2)
+                .lineLimit(banner.kind == .error ? 2 : 1)
                 .minimumScaleFactor(0.7)
             Spacer(minLength: 2)
             if banner.entryID != nil {
@@ -143,7 +164,7 @@ struct BannerView: View {
         .background(color.opacity(0.18), in: Capsule())
         .background(.black, in: Capsule())
         .overlay(Capsule().strokeBorder(color, lineWidth: 2))
-        .padding(.horizontal, 2)
+        .padding(.horizontal, 6)
         .accessibilityElement(children: .combine)
         .accessibilityAction(named: "Undo", undo)
     }
@@ -162,7 +183,6 @@ private struct SideColumn: View {
     let problem: Problem
     let stats: ProblemStats
     let isProject: Bool
-    let position: String
     let onAttempt: () -> Void
     let onSent: () -> Void
     let onStar: () -> Void
@@ -192,15 +212,6 @@ private struct SideColumn: View {
                 .accessibilityLabel(isProject ? "Project. Tap to unstar" : "Star as a project")
                 .accessibilityAction { onStar() }
             Spacer(minLength: 4)
-            HStack(spacing: 4) {
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2)
-                Text(position)
-                    .font(.footnote.weight(.semibold))
-                    .monospacedDigit()
-            }
-            .foregroundStyle(Theme.secondaryText)
-            .accessibilityLabel("Problem \(position). Turn the Digital Crown for the next one.")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
