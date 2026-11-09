@@ -16,6 +16,10 @@ final class BannerModel {
         let entryID: UUID?
         /// The problem it was logged on; moving to another problem hides it.
         var problemID: String?
+        /// Entries Undo puts back (after Unsend cleared them).
+        var restore: [Logbook.Snapshot] = []
+
+        var canUndo: Bool { entryID != nil || !restore.isEmpty }
     }
 
     /// How long Undo stays available (5 seconds in the app).
@@ -99,9 +103,25 @@ final class AppModel {
         WKInterfaceDevice.current().play(.success)
     }
 
+    /// Clears a sent problem's log for this hold set: unsent, back to 0 tries.
+    /// Undo (5 seconds) puts every entry back.
+    func unsend() {
+        guard let problem = currentProblem else { return }
+        let removed = Logbook.clearLog(for: problem, in: context)
+        guard !removed.isEmpty else { return }
+        banner.show(.init(kind: .info, text: "Unsent · 0 tries", entryID: nil, problemID: problem.problemId,
+                          restore: removed))
+        WKInterfaceDevice.current().play(.directionDown)
+    }
+
     func undoBanner() {
-        guard let entryID = banner.current?.entryID else { return }
-        Logbook.undo(entryID: entryID, in: context)
+        guard let current = banner.current, current.canUndo else { return }
+        if let entryID = current.entryID {
+            Logbook.undo(entryID: entryID, in: context)
+        }
+        if !current.restore.isEmpty {
+            Logbook.restore(current.restore, in: context)
+        }
         banner.dismiss()
         WKInterfaceDevice.current().play(.directionDown)
     }

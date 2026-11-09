@@ -46,6 +46,31 @@ struct LoggingTests {
         #expect(stats.sends == 2)
     }
 
+    @Test func unsendResetsTriesAndUndoBringsThemBack() throws {
+        model.logAttempt()
+        model.logAttempt()
+        model.markSent()
+        // Another problem's log is left alone.
+        model.session.step(by: 1, settings: model.settings)
+        model.logAttempt()
+        model.session.step(by: -1, settings: model.settings)
+        #expect(stats == ProblemStats(attempts: 3, sends: 1))
+
+        model.unsend()
+        #expect(stats == ProblemStats())
+        #expect(model.banner.current?.canUndo == true)
+        #expect(try model.context.fetchCount(FetchDescriptor<LogEntry>()) == 1)
+
+        model.undoBanner()
+        #expect(stats == ProblemStats(attempts: 3, sends: 1))
+        #expect(model.banner.current == nil)
+    }
+
+    @Test func unsendWithNothingLoggedDoesNothing() {
+        model.unsend()
+        #expect(model.banner.current == nil)
+    }
+
     @Test func undoRemovesOnlyTheLastEntry() {
         model.logAttempt()
         model.logAttempt()

@@ -84,6 +84,9 @@ struct MainView: View {
         switch RuntimeEnvironment.debugValue("demoBanner") {
         case "attempt": model.logAttempt()
         case "sent": model.markSent()
+        case "unsend":
+            model.markSent()
+            model.unsend()
         default: break
         }
         #endif

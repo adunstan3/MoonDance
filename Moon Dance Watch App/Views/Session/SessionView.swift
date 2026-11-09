@@ -121,7 +121,8 @@ struct SessionView: View {
                 .accessibilityHint("Turn the Digital Crown for the next problem")
             SideColumn(problem: problem, stats: stats, isProject: isProject, scale: settings.gradeScale,
                        compact: nameWraps,
-                       onAttempt: model.logAttempt, onSent: model.markSent, onStar: model.toggleProject)
+                       onAttempt: model.logAttempt, onSent: model.markSent, onUnsend: model.unsend,
+                       onStar: model.toggleProject)
                 .frame(width: SideColumn.width)
         }
         .padding(.top, 8)
@@ -160,7 +161,7 @@ struct BannerView: View {
                 .lineLimit(banner.kind == .error ? 2 : 1)
                 .minimumScaleFactor(0.7)
             Spacer(minLength: 2)
-            if banner.entryID != nil {
+            if banner.canUndo {
                 Button(action: undo) {
                     Text("Undo")
                         .font(.footnote.weight(.bold))
@@ -205,6 +206,7 @@ private struct SideColumn: View {
     let compact: Bool
     let onAttempt: () -> Void
     let onSent: () -> Void
+    let onUnsend: () -> Void
     let onStar: () -> Void
 
     var body: some View {
@@ -241,7 +243,7 @@ private struct SideColumn: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
-    /// Tap: +1 attempt. Hold: Sent.
+    /// Tap: +1 attempt. Hold: Sent, or, if already sent, Unsend (clears its log).
     private var attempts: some View {
         VStack(alignment: .leading, spacing: 0) {
             if stats.isSent {
@@ -267,13 +269,15 @@ private struct SideColumn: View {
         .contentShape(Rectangle())
         .gesture(
             LongPressGesture(minimumDuration: 0.6)
-                .onEnded { _ in onSent() }
+                .onEnded { _ in stats.isSent ? onUnsend() : onSent() }
                 .exclusively(before: TapGesture().onEnded { onAttempt() })
         )
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Tap for one more attempt. Touch and hold to mark sent.")
+        .accessibilityHint(stats.isSent
+            ? "Tap for one more attempt. Touch and hold to unsend and reset tries."
+            : "Tap for one more attempt. Touch and hold to mark sent.")
         .accessibilityAction(named: "Add attempt") { onAttempt() }
-        .accessibilityAction(named: "Mark sent") { onSent() }
+        .accessibilityAction(named: stats.isSent ? "Unsend" : "Mark sent") { stats.isSent ? onUnsend() : onSent() }
     }
 }

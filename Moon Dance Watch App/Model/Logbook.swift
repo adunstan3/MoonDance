@@ -22,6 +22,38 @@ enum Logbook {
         try? context.save()
     }
 
+    /// A removed log entry, kept so Undo can put it back exactly.
+    struct Snapshot: Equatable, Sendable {
+        let id: UUID
+        let problemId: String
+        let holdSet: String
+        let date: Date
+        let isSend: Bool
+    }
+
+    /// Removes every attempt and send of a problem on its hold set.
+    @discardableResult
+    static func clearLog(for problem: Problem, in context: ModelContext) -> [Snapshot] {
+        let id = problem.problemId
+        let set = problem.holdSet
+        let descriptor = FetchDescriptor<LogEntry>(predicate: #Predicate { $0.problemId == id && $0.holdSet == set })
+        let entries = (try? context.fetch(descriptor)) ?? []
+        let snapshots = entries.map {
+            Snapshot(id: $0.id, problemId: $0.problemId, holdSet: $0.holdSet, date: $0.date, isSend: $0.isSend)
+        }
+        entries.forEach(context.delete)
+        try? context.save()
+        return snapshots
+    }
+
+    static func restore(_ snapshots: [Snapshot], in context: ModelContext) {
+        for snapshot in snapshots {
+            context.insert(LogEntry(id: snapshot.id, problemId: snapshot.problemId, holdSet: snapshot.holdSet,
+                                    date: snapshot.date, isSend: snapshot.isSend))
+        }
+        try? context.save()
+    }
+
     static func stats(for problem: Problem, in context: ModelContext) -> ProblemStats {
         let id = problem.problemId
         let set = problem.holdSet
