@@ -32,7 +32,8 @@ final class SessionUITests: XCTestCase {
         waitForExpectations(timeout: 5)
         let second = name.label
 
-        XCUIDevice.shared.rotateDigitalCrown(delta: -0.3)
+        // Turning well past the start stops at the first problem.
+        XCUIDevice.shared.rotateDigitalCrown(delta: -1.0)
         expectation(for: NSPredicate(format: "label == %@", first), evaluatedWith: name)
         waitForExpectations(timeout: 5)
         XCTAssertNotEqual(first, second)

@@ -27,22 +27,24 @@ struct SessionView: View {
         static let clockWidth: CGFloat = 62
     }
 
+    /// True when the problem name takes two lines; the side column tightens up.
+    @State private var nameWraps = false
+
     var body: some View {
-        Group {
-            if let problem = session.current {
-                content(for: problem)
-            } else {
-                VStack(spacing: 0) {
-                    header
+        VStack(spacing: 0) {
+            header
+            Group {
+                if let problem = session.current {
+                    content(for: problem)
+                } else {
                     emptyState.frame(maxHeight: .infinity)
                 }
             }
-        }
-        .overlay(alignment: .top) {
-            if let current = banner.current {
-                BannerView(banner: current) { model.undoBanner() }
-                    .padding(.top, Header.top + Header.height + 4)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+            .overlay(alignment: .top) {
+                if let current = banner.current {
+                    BannerView(banner: current) { model.undoBanner() }
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
         }
         .ignoresSafeArea(edges: [.top, .bottom])
@@ -68,64 +70,61 @@ struct SessionView: View {
         .onAppear { crownFocused = true }
     }
 
-    private var chevron: Text {
+    private var chevron: some View {
         Text(Image(systemName: "chevron.down"))
             .font(.caption2.weight(.bold))
             .foregroundStyle(Theme.secondaryText)
     }
 
     /// The problem name on the clock's line; tapping it opens the problem list.
-    /// Header for the empty state: the name button beside the clock.
+    /// The problem name across the top, on the clock's line. Long names wrap to a
+    /// second line (then "…"), pushing the grid and side column down.
     private var header: some View {
         HStack(spacing: 0) {
-            nameButton
+            Button {
+                router.push(.problemList)
+            } label: {
+                HStack(alignment: .lastTextBaseline, spacing: 4) {
+                    Text(session.current?.name ?? "Problems")
+                        .foregroundStyle(Theme.white)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    chevron
+                }
+                .font(.headline)
+                .frame(minHeight: Header.height, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("problemName")
+            .accessibilityHint("Opens the problem list")
             Spacer(minLength: Header.clockWidth)
         }
         .padding(.top, Header.top)
         .padding(.leading, Header.leading)
-    }
-
-    /// The problem name, starting on the clock's line. Long names wrap (up to three
-    /// lines) above the grid, which shrinks to fit; the chevron follows the last word.
-    private var nameButton: some View {
-        Button {
-            router.push(.problemList)
-        } label: {
-            Text("\(session.current?.name ?? "Problems") \(chevron)")
-                .foregroundStyle(Theme.white)
-                .font(.headline)
-                .lineLimit(3)
-                .minimumScaleFactor(0.85)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, minHeight: Header.height, alignment: .leading)
-                .contentShape(Rectangle())
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+            nameWraps = height > Header.top + Header.height + 6
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("problemName")
-        .accessibilityHint("Opens the problem list")
     }
 
     private func content(for problem: Problem) -> some View {
         let stats = LogStats(entries: logs, holdSet: problem.holdSet)[problem.problemId]
         let isProject = projects.contains { $0.problemId == problem.problemId && $0.holdSet == problem.holdSet }
-        // Left: the name, then the grid filling the rest of the height (a long name
-        // takes room from the grid only). Right: everything else, starting under
-        // the clock, with Light it at the bottom.
+        // The grid takes the full height on the left; everything else, Light it
+        // included, is in the column on the right. A two-line name pushes both down
+        // and the column tightens up.
         return HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 8) {
-                nameButton
-                    .padding(.leading, Header.leading - 10)
-                HoldGridView(holds: problem.holds)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .accessibilityHint("Turn the Digital Crown for the next problem")
-            }
+            HoldGridView(holds: problem.holds)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .accessibilityHint("Turn the Digital Crown for the next problem")
             SideColumn(problem: problem, stats: stats, isProject: isProject, scale: settings.gradeScale,
+                       compact: nameWraps,
                        onAttempt: model.logAttempt, onSent: model.markSent, onStar: model.toggleProject)
                 .frame(width: SideColumn.width)
-                .padding(.top, Header.height + 8)
         }
-        .padding(.top, Header.top)
+        .padding(.top, 8)
         .padding(.leading, 10)
         .padding(.trailing, 6)
         .padding(.bottom, 12)
@@ -202,6 +201,8 @@ private struct SideColumn: View {
     let stats: ProblemStats
     let isProject: Bool
     let scale: GradeScale
+    /// Tighter spacing when the problem name takes two lines.
+    let compact: Bool
     let onAttempt: () -> Void
     let onSent: () -> Void
     let onStar: () -> Void
@@ -209,10 +210,10 @@ private struct SideColumn: View {
     var body: some View {
         // Grade, tries and star sit together at the top; Light it is raised and
         // pulled in from the screen's rounded bottom-right corner.
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: compact ? 1 : 6) {
             HStack(alignment: .center, spacing: 5) {
                 Text(problem.grade(scale))
-                    .font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .font(.system(size: compact ? 26 : 30, weight: .heavy, design: .rounded))
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
                 if problem.isBenchmark { BenchmarkBadge() }
@@ -226,7 +227,7 @@ private struct SideColumn: View {
                     .lineLimit(1)
             }
                 .foregroundStyle(isProject ? Theme.white : Theme.secondaryText)
-                .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: compact ? 26 : 32, alignment: .leading)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onStar)
                 .accessibilityAddTraits(.isButton)
@@ -235,7 +236,7 @@ private struct SideColumn: View {
             Spacer(minLength: 0)
             LightControls(problem: problem)
                 .padding(.trailing, 6)
-                .padding(.bottom, 14)
+                .padding(.bottom, compact ? 8 : 14)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
@@ -262,7 +263,7 @@ private struct SideColumn: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: compact ? 32 : 40, alignment: .leading)
         .contentShape(Rectangle())
         .gesture(
             LongPressGesture(minimumDuration: 0.6)
