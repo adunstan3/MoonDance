@@ -14,7 +14,7 @@ Source: the community emulator github.com/e-sr/moonboard (`ble/moonboard_app_pro
    We follow the code. If every light is off by one row, this is why.
    Check: Test send should light D5 + F4 green, E8 H10 G13 D15 blue, F18 red.
 2. **Clear.** The emulator has no clear command. We send an empty problem `l##`.
-   If Clear does nothing, the official app's way of clearing is different; note it.
+   Checked: everything goes off except A1 (bottom-left), which stays lit. Accepted.
 3. **Newer box (V3/V4, 12-digit ID).** It may not advertise the Nordic UART
    service (6E400001-…) or may name itself differently. The scan therefore has no
    service filter and lists anything named "moon…" or offering UART. If nothing

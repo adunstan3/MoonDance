@@ -21,8 +21,9 @@ nonisolated enum BoardProtocol {
     /// Bytes per BLE write when the MTU is the default 23 (23 − 3 header bytes).
     static let defaultPacketLength = 20
 
-    /// The emulator has no "clear" command. An empty problem is our best guess
-    /// at what turns every light off. UNVERIFIED: check at the gym.
+    /// The emulator has no "clear" command. An empty problem turns the lights off.
+    /// Checked at the gym (Rocky Top box): everything goes off except A1 (LED 0),
+    /// probably the firmware reading the empty hold as position 0. Kept as is.
     static let clearMessage = "l##"
 
     /// The position number the box expects for a grid position.
