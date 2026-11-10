@@ -7,6 +7,9 @@ nonisolated enum BoardFailure: Equatable, Sendable {
     case bluetoothNotAllowed
     case bluetoothOff
     case timedOut(seconds: Int64)
+    /// The box wasn't advertising: someone else is connected, or it's out of range.
+    case notAdvertising(seconds: Int64)
+    case connectTimedOut(seconds: Int64)
     case connectFailed(String)
     case disconnected
     case discoveryFailed(String)
@@ -22,6 +25,11 @@ nonisolated enum BoardFailure: Equatable, Sendable {
         case .bluetoothNotAllowed: "Bluetooth permission is off: Settings › Privacy › Bluetooth › Moondance"
         case .bluetoothOff: "Bluetooth is turned off"
         case .timedOut(let seconds): "Timed out: the board didn't answer within \(seconds) s"
+        case .notAdvertising(let seconds):
+            "Didn't hear the board advertising within \(seconds) s: someone else is probably connected, "
+                + "or it's out of range. Not connecting, so we don't take it from them"
+        case .connectTimedOut(let seconds):
+            "Connection didn't open within \(seconds) s; cancelled so it can't take the board from someone later"
         case .connectFailed(let reason): "Couldn't connect: \(reason)"
         case .disconnected: "The board disconnected before the problem was sent"
         case .discoveryFailed(let reason): "Discovery failed: \(reason)"
@@ -39,6 +47,7 @@ nonisolated enum BoardFailure: Equatable, Sendable {
         case .bluetoothNotAllowed: "Allow Bluetooth for Moondance in Settings"
         case .bluetoothOff: "Turn Bluetooth on, then retry"
         case .timedOut: "Board didn't answer. Move closer and retry"
+        case .notAdvertising, .connectTimedOut: "Someone else has the board. Retry in a moment"
         case .connectFailed, .disconnected: "Board busy or out of range. Retry"
         case .discoveryFailed, .writeFailed: "Sending failed. Retry"
         case .serviceMissing, .characteristicMissing, .notWritable: "That box didn't accept problems. See Bluetooth log"

@@ -23,6 +23,12 @@ struct DiscoveredBoard: Identifiable, Hashable {
 /// Every job is: connect → find the UART RX characteristic → write the packets →
 /// disconnect right away, so other climbers' phones can reach the board.
 /// Every step and error goes to `log`.
+///
+/// The box takes one connection at a time and stops advertising while someone is
+/// connected. So a job first listens for the box's advertising and only connects
+/// once it hears it. If it doesn't hear it, someone else has the board and we give
+/// up instead of leaving a connection request waiting, which would grab the board
+/// the moment they let go.
 @Observable
 final class BoardManager: NSObject {
     enum Status: Equatable {
@@ -41,6 +47,11 @@ final class BoardManager: NSObject {
 
     /// How long a whole job may take before we give up.
     static let jobTimeout: Duration = .seconds(15)
+    /// How long to listen for the box advertising before deciding it's busy.
+    static let advertisingWindow: Duration = .seconds(3)
+    /// How long a connection attempt may wait before we cancel it, so it can't
+    /// take the board from someone later.
+    static let connectTimeout: Duration = .seconds(4)
     /// Pause after the last write before disconnecting, so the box has the data.
     static let disconnectDelay: Duration = .milliseconds(400)
 
@@ -173,29 +184,35 @@ final class BoardManager: NSObject {
         }
     }
 
+    /// Listens for the box's advertising, then connects (see the type comment).
     private func connectForJob() {
-        guard job != nil, peripheral == nil, let central else { return }
-        if let idString = settings.boardID, let id = UUID(uuidString: idString) {
-            if let known = central.retrievePeripherals(withIdentifiers: [id]).first {
-                log.add("Saved board found by the system")
-                connect(known)
-                return
-            }
-            log.add("Saved board not known yet; scanning for it")
+        guard let jobID = job?.id, peripheral == nil, central != nil, !searchingForJob else { return }
+        if settings.boardID != nil {
+            log.add("Listening for the saved board")
         } else {
-            log.add("No saved board; scanning for the first LED box")
+            log.add("No saved board; listening for the first LED box")
         }
         searchingForJob = true
         beginScan()
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.advertisingWindow)
+            guard let self, self.job?.id == jobID, self.searchingForJob, self.peripheral == nil else { return }
+            self.fail(.notAdvertising(seconds: Self.advertisingWindow.components.seconds))
+        }
     }
 
     private func connect(_ target: CBPeripheral) {
-        guard let central else { return }
+        guard let central, let jobID = job?.id else { return }
         peripheral = target
         knownPeripherals[target.identifier] = target
         target.delegate = self
         log.add("Connecting to \(target.name ?? "unnamed") (\(target.identifier.uuidString))")
         central.connect(target, options: nil)
+        Task { [weak self] in
+            try? await Task.sleep(for: Self.connectTimeout)
+            guard let self, self.job?.id == jobID, self.status == .connecting else { return }
+            self.fail(.connectTimedOut(seconds: Self.connectTimeout.components.seconds))
+        }
     }
 
     private func writeNext() {

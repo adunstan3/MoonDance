@@ -99,7 +99,7 @@ struct BoardFailureTests {
     @Test func everyFailureHasAShortMessageAndALogLine() {
         let failures: [BoardFailure] = [
             .bluetoothUnavailable, .bluetoothNotAllowed, .bluetoothOff, .timedOut(seconds: 15),
-            .connectFailed("x"), .disconnected, .discoveryFailed("x"), .serviceMissing,
+            .notAdvertising(seconds: 3), .connectTimedOut(seconds: 4), .connectFailed("x"), .disconnected, .discoveryFailed("x"), .serviceMissing,
             .characteristicMissing, .notWritable, .writeFailed(packet: 2, reason: "x"),
         ]
         for failure in failures {

@@ -35,10 +35,14 @@ Source: the community emulator github.com/e-sr/moonboard (`ble/moonboard_app_pro
    the 12-digit ID if the box's name contains one (otherwise the first 8 characters
    of the watch's identifier for it). Check the ID shown matches the box's label.
 8. **Auto-connect.** The saved box is remembered by Core Bluetooth's identifier on
-   this watch. After a relaunch, Light it should connect without scanning; the log
-   says "Saved board found by the system".
+   this watch. Light it listens for that box advertising (log: "Listening for the
+   saved board"), then connects. It should hear it in well under a second.
 9. **Sharing the board.** After Light it, check someone's phone can connect with
-   the official app straight away.
+   the official app straight away. While someone else is connected, Light it should
+   fail within about 3 s with "Someone else has the board. Retry in a moment", and
+   their phone should keep the board: the box stops advertising while connected, so
+   Moondance doesn't connect at all. (The first gym visit, with a waiting
+   connection request, fought with other climbers' phones.)
 
 ## Action Button (milestone 5)
 
@@ -65,5 +69,6 @@ Button or use its long press, and the attempt/sent shortcuts were removed.)
     connecting/sending, **● Lit** in green with **Clear**, or **● Retry** in red.
     A failure also shows a red banner saying what to do (move closer, turn on
     Bluetooth, board busy…) and the full reason goes to the Bluetooth log.
-14. Walk out of range and tap Light it: after 15 s it should say "Board didn't
-    answer. Move closer and retry".
+14. Walk out of range and tap Light it: after about 3 s it should say "Someone else
+    has the board. Retry in a moment" (out of range and busy look the same: no
+    advertising heard).

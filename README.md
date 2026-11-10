@@ -194,6 +194,10 @@ The protocol comes from the community LED box emulator,
 - Each number is the hold's position along the LED strip, snaking up column A, down
   column B and so on: A1 = 0 … A18 = 17, B18 = 18 … K18 = 197.
 - The string is sent in 20-byte packets. Clear sends an empty problem, `l##`.
+- The box takes one connection at a time and stops advertising while someone is
+  connected. Moondance listens for its advertising first (up to 3 s) and connects only
+  when it hears it, then disconnects as soon as the problem is written. If the board is
+  busy it says "Someone else has the board" rather than waiting in line to grab it.
 
 Newer boxes (V3/V4, with a 12-digit ID) may not match the emulator exactly, and none of
 this can be tested without the real board. [`GYM-CHECKS.md`](GYM-CHECKS.md) lists what
