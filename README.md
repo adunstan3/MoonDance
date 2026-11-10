@@ -71,9 +71,10 @@ The hold grid fills the left side in the board's LED colors: **green** start hol
 <img src="docs/screenshots/preview-zoom.png" width="200" align="right" alt="Hold pictures, zoomed in">
 
 Tap the hold grid on Session to see the problem with **pictures of the actual holds**:
-only the problem's holds are shown, each ringed in its color (green start, blue hand,
-red finish), with faint dots where the other holds are and **A–K / 1–18** around the
-edge. Both hold sets have pictures: 2016 (sets A and B and the original school
+only the problem's holds are shown, with the **start** holds outlined in green and the
+**finish** in red (the outline follows each hold's own shape), faint dots where the
+other holds are, and **A–K / 1–18** around the edge. Hand holds aren't outlined: with
+every other hold hidden, there's nothing to mix them up with. Both hold sets have pictures: 2016 (sets A and B and the original school
 holds) and 2024 (sets D, E and F and the wooden holds).
 
 - **Digital Crown** — zoom in and out (up to 4×).
@@ -252,7 +253,8 @@ The hold pictures (`HoldImages-2016.png`, `HoldImages-2024.png` and `HoldImages.
 in Resources) are built by [`tools/build_hold_images.swift`](tools/build_hold_images.swift)
 from the per-hold-set layer images in [boardsesh](https://github.com/boardsesh/boardsesh)
 (Apache-2.0), pinned to one commit. It finds each hold, fits the grid to them, cuts
-every hold out on its own and checks that every hold used by a problem has a picture.
+every hold out on its own, traces an outline just outside each one, and checks that
+every hold used by a problem has a picture.
 The hold artwork itself is Moon Climbing's.
 
 ```sh
@@ -300,10 +302,10 @@ Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the p
 
 ## Tests
 
-- **66 unit tests** (Swift Testing): the board protocol and LED numbering, the problem
+- **68 unit tests** (Swift Testing): the board protocol and LED numbering, the problem
   snapshot and its loading, list ordering and pinning, logging, undo and unsend,
   History's day grouping, CSV export, settings, Bluetooth failure messages, the hold
-  pictures (every problem hold has one) and the preview's zoom and pan maths.
+  pictures and outlines (every problem hold has them) and the preview's zoom and pan maths.
 - **5 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
   after swiping between pages and after the hold-picture preview (which the Crown
   zooms), and that a small nudge doesn't skip a problem.

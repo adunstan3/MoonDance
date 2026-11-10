@@ -2,8 +2,8 @@ import SwiftData
 import SwiftUI
 
 /// Full-screen look at a problem with pictures of the real holds: only the
-/// problem's holds, each ringed in its role's color (green start, blue hand,
-/// red finish), with A–K and 1–18 around the edge.
+/// problem's holds, with the start holds outlined in green and the finish in red,
+/// and A–K and 1–18 around the edge.
 ///
 /// Turn the Digital Crown to zoom (about the middle of the screen), drag to pan
 /// (a little past every edge, so corners clear the screen's rounding), double-tap
@@ -119,7 +119,7 @@ struct ProblemPreviewView: View {
             }
         }
 
-        // The problem's holds, then a ring around each.
+        // The problem's holds, then outlines on the start and finish holds.
         let tile = (images.info(for: problem.holdSet)?.tileInCells ?? 1.44) * scale
         for hold in problem.holds {
             guard let position = GridPosition(hold.position) else { continue }
@@ -129,13 +129,26 @@ struct ProblemPreviewView: View {
                 context.draw(image, in: CGRect(x: centre.x - tile / 2, y: centre.y - tile / 2, width: tile, height: tile))
             }
         }
-        let radius = scale * PreviewGeometry.ringRadius
-        let line = max(1.5, scale * 0.07)
-        for hold in problem.holds {
+        // Start and finish holds get an outline hugging the hold, in green or red.
+        // Hand holds don't need one: with the other holds hidden, nothing clutters
+        // them. Thin and constant in points, so it stays crisp at every zoom.
+        let info = images.info(for: problem.holdSet)
+        let line = max(1.1, scale * 0.045)
+        for hold in problem.holds where hold.role != .hand {
             guard let position = GridPosition(hold.position) else { continue }
-            let centre = g.screenPoint(column: position.column, row: position.row)
-            let ring = Path(ellipseIn: CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2))
-            context.stroke(ring, with: .color(Theme.color(for: hold.role)), lineWidth: line)
+            let grid = g.boardPoint(column: position.column, row: position.row)
+            let path: Path
+            if let outline = info?.outline(for: position) {
+                path = PreviewGeometry.smoothPath(outline.map {
+                    g.screenPoint(boardX: grid.x + $0.x, boardY: grid.y + $0.y)
+                })
+            } else {
+                let centre = g.screenPoint(boardX: grid.x, boardY: grid.y)
+                let r = scale * 0.5
+                path = Path(ellipseIn: CGRect(x: centre.x - r, y: centre.y - r, width: r * 2, height: r * 2))
+            }
+            context.stroke(path, with: .color(Theme.color(for: hold.role)),
+                           style: StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round))
         }
 
         drawLabels(g, in: &context)
@@ -179,7 +192,7 @@ struct ProblemPreviewView: View {
 nonisolated struct PreviewGeometry {
     static let gutterLeft = 1.0
     static let gutterTop = 1.0
-    /// Space on the right and bottom so rings on column K and row 1 fit.
+    /// Space on the right and bottom so outlines on column K and row 1 fit.
     static let margin = 0.25
     static let boardWidth = Double(GridPosition.columns) + gutterLeft + margin
     static let boardHeight = Double(GridPosition.rows) + gutterTop + margin
@@ -192,8 +205,6 @@ nonisolated struct PreviewGeometry {
     /// How far (in points) you can pan past each edge of the board, so holds in the
     /// corners can be moved clear of the screen's rounding.
     static let overscroll: CGFloat = 20
-    /// Ring radius, in cells.
-    static let ringRadius = 0.62
 
     let size: CGSize
     let zoom: Double
@@ -223,8 +234,27 @@ nonisolated struct PreviewGeometry {
     }
 
     func screenPoint(column: Int, row: Int) -> CGPoint {
-        screenPoint(boardX: Self.gutterLeft + CGFloat(column) + 0.5,
-                    boardY: Self.gutterTop + CGFloat(GridPosition.rows - row) + 0.5)
+        let point = boardPoint(column: column, row: row)
+        return screenPoint(boardX: point.x, boardY: point.y)
+    }
+
+    /// A grid point in board units.
+    func boardPoint(column: Int, row: Int) -> CGPoint {
+        CGPoint(x: Self.gutterLeft + CGFloat(column) + 0.5, y: Self.gutterTop + CGFloat(GridPosition.rows - row) + 0.5)
+    }
+
+    /// A closed, smooth curve through an outline's points: quadratic curves between
+    /// the midpoints of each side, with the points as control points.
+    static func smoothPath(_ points: [CGPoint]) -> Path {
+        var path = Path()
+        guard points.count >= 3 else { return path }
+        func mid(_ a: CGPoint, _ b: CGPoint) -> CGPoint { CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2) }
+        path.move(to: mid(points[points.count - 1], points[0]))
+        for i in points.indices {
+            path.addQuadCurve(to: mid(points[i], points[(i + 1) % points.count]), control: points[i])
+        }
+        path.closeSubpath()
+        return path
     }
 
     /// Keeps the board on screen. Along an axis where it's bigger than the

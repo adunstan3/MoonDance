@@ -8,15 +8,26 @@ import ImageIO
 /// hold set has one sprite sheet, `HoldImages-<set>.png`: an 11 × 18 grid of square
 /// tiles (column A on the left, row 18 at the top), each holding one hold centred on
 /// its grid point. `HoldImages.json` gives the tile size, how many pixels one grid
-/// cell is in the source, and which positions have a hold.
+/// cell is in the source, and for each position with a hold, an outline traced a
+/// little outside the hold (holds aren't always centred on their bolt).
 nonisolated struct HoldImageManifest: Decodable, Sendable {
     struct HoldSetInfo: Decodable, Sendable {
         /// Tile width and height, in sheet pixels.
         let tile: Int
         /// Grid spacing in sheet pixels.
         let cell: Double
-        /// Positions with a hold, e.g. "A5".
-        let positions: [String]
+        /// Position (e.g. "A5") → outline as [x0, y0, x1, y1, …], in cells from the
+        /// grid point (y down).
+        let outlines: [String: [Double]]
+
+        /// Positions with a hold.
+        var positions: [String] { Array(outlines.keys) }
+
+        /// The closed outline around a hold, in cells from its grid point (y down).
+        func outline(for position: GridPosition) -> [CGPoint]? {
+            guard let values = outlines[position.name], values.count >= 6 else { return nil }
+            return stride(from: 0, to: values.count - 1, by: 2).map { CGPoint(x: values[$0], y: values[$0 + 1]) }
+        }
 
         /// How many grid cells wide a tile is.
         var tileInCells: Double { Double(tile) / cell }
@@ -60,7 +71,7 @@ final class HoldImages {
     func sprite(for position: GridPosition, holdSet: String) -> CGImage? {
         let key = "\(holdSet)-\(position.name)"
         if let cached = sprites[key] { return cached }
-        guard let info = info(for: holdSet), info.positions.contains(position.name),
+        guard let info = info(for: holdSet), info.outlines[position.name] != nil,
               let sheet = sheet(for: holdSet),
               let sprite = sheet.cropping(to: HoldImageManifest.tileRect(for: position, tile: info.tile))
         else { return nil }

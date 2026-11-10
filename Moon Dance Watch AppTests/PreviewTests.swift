@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import SwiftUI
 import Testing
 @testable import Moon_Dance_Watch_App
 
@@ -42,6 +43,32 @@ struct HoldImagesTests {
         #expect(sprite.width == images.info(for: "2024")?.tile)
     }
 
+    /// Every hold has an outline that wraps around it, close in, and follows the
+    /// hold rather than its bolt: J15 on the 2024 set sits a quarter cell right.
+    @Test func holdOutlinesHugTheirHolds() throws {
+        let manifest = try #require(HoldImageManifest.bundled())
+        for info in manifest.sets.values {
+            for position in info.positions {
+                let outline = try #require(info.outline(for: GridPosition(position)!))
+                #expect(outline.count >= 6)
+                let reach = outline.map { hypot($0.x, $0.y) }.max()!
+                #expect(reach < info.tileInCells / 2 + 0.1, "\(position) outline leaves its tile")
+                #expect(reach > 0.1, "\(position) outline is too small")
+            }
+        }
+        let j15 = try #require(manifest.sets["2024"]?.outline(for: GridPosition("J15")!))
+        let middle = j15.map(\.x).reduce(0, +) / Double(j15.count)
+        #expect(middle > 0.12, "J15's outline should sit right of its bolt")
+    }
+
+    @Test func smoothPathClosesThroughTheMidpoints() {
+        let square = [CGPoint(x: 0, y: 0), CGPoint(x: 2, y: 0), CGPoint(x: 2, y: 2), CGPoint(x: 0, y: 2)]
+        let path = PreviewGeometry.smoothPath(square)
+        #expect(path.boundingRect.width > 1.5 && path.boundingRect.width <= 2)
+        #expect(path.contains(CGPoint(x: 1, y: 1)))
+        #expect(PreviewGeometry.smoothPath([CGPoint.zero]).isEmpty)
+    }
+
     @Test func emptyPositionHasNoPicture() {
         // 2016 has no hold at A1.
         #expect(HoldImages().sprite(for: GridPosition("A1")!, holdSet: "2016") == nil)
@@ -55,10 +82,10 @@ struct PreviewGeometryTests {
         let g = PreviewGeometry(size: watch, zoom: 1, centre: PreviewGeometry.boardCentre)
         let topLeft = g.screenPoint(column: 0, row: 18)
         let bottomRight = g.screenPoint(column: 10, row: 1)
-        let ring = g.scale * PreviewGeometry.ringRadius
+        let outline = g.scale * 0.75
         #expect(topLeft.y - g.scale / 2 >= PreviewGeometry.topInset - 0.5)
-        #expect(bottomRight.y + ring <= watch.height - PreviewGeometry.bottomInset, "row 1 rings fit")
-        #expect(bottomRight.x + ring <= watch.width, "column K rings fit")
+        #expect(bottomRight.y + outline <= watch.height - PreviewGeometry.bottomInset, "row 1 outlines fit")
+        #expect(bottomRight.x + outline <= watch.width, "column K outlines fit")
         // Centred: the same space either side of the board (gutter and margin included).
         let left = g.screenPoint(boardX: 0, boardY: 0).x
         let right = watch.width - g.screenPoint(boardX: PreviewGeometry.boardWidth, boardY: 0).x
@@ -95,7 +122,7 @@ struct PreviewGeometryTests {
             #expect(abs(far.x - (watch.width - over)) < 0.001)
             #expect(abs(far.y - (watch.height - PreviewGeometry.bottomInset - over)) < 0.001)
             let k1 = bottomRight.screenPoint(column: 10, row: 1)
-            #expect(k1.x + bottomRight.scale * PreviewGeometry.ringRadius < watch.width - over)
+            #expect(k1.x + bottomRight.scale * 0.7 < watch.width - over)
         }
     }
 

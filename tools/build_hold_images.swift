@@ -15,7 +15,9 @@
 //   3. Gives each hold to its nearest grid position and copies it, alone, into that
 //      position's square tile, centred on the grid point. Tiles sit in an 11 × 18
 //      sheet: column A–K left to right, row 18 at the top.
-//   4. Checks every hold used by a problem in Problems.json has a picture.
+//   4. Traces an outline around each hold, a few pixels out (HoldImages.json), so
+//      the preview can outline the hold itself rather than circle its bolt hole.
+//   5. Checks every hold used by a problem in Problems.json has a picture.
 //
 // Usage (from the repo root):  swift tools/build_hold_images.swift
 // Never edit the outputs by hand; rerun this script and rebuild the app.
@@ -182,6 +184,114 @@ struct Grid {
 
 func position(_ column: Int, _ row: Int) -> String { "\(columnLetters[column])\(row)" }
 
+// MARK: - Outlines
+
+/// Pixels at least this opaque count as the hold when tracing its outline.
+let outlineAlpha: UInt8 = 64
+/// How far outside the hold the outline runs, in source pixels.
+let outlineGap = 2.5
+/// Douglas–Peucker tolerance when simplifying outlines, in source pixels.
+let outlineTolerance = 0.5
+
+/// The outer edge of a set of pixels grown by `outlineGap`, as a closed loop of
+/// points in source pixel coordinates (marching squares through pixel centres).
+func traceOutline(_ pixels: [(Int, Int)]) -> [(x: Double, y: Double)] {
+    let pad = Int(outlineGap.rounded(.up)) + 2
+    let minX = pixels.map(\.0).min()! - pad, maxX = pixels.map(\.0).max()! + pad
+    let minY = pixels.map(\.1).min()! - pad, maxY = pixels.map(\.1).max()! + pad
+    let (w, h) = (maxX - minX + 1, maxY - minY + 1)
+
+    // Grow the hold by a disc of radius outlineGap.
+    var mask = [Bool](repeating: false, count: w * h)
+    let reach = Int(outlineGap)
+    for (px, py) in pixels {
+        for dy in -reach...reach {
+            for dx in -reach...reach where Double(dx * dx + dy * dy) <= outlineGap * outlineGap {
+                mask[(py - minY + dy) * w + (px - minX + dx)] = true
+            }
+        }
+    }
+    func inside(_ x: Int, _ y: Int) -> Bool { x >= 0 && y >= 0 && x < w && y < h && mask[y * w + x] }
+
+    // Marching squares on pixel centres. Points are edge midpoints, kept in doubled
+    // coordinates so they're exact integers; each is shared by exactly two segments.
+    struct Key: Hashable { let x: Int, y: Int }
+    var links: [Key: [Key]] = [:]
+    func link(_ a: Key, _ b: Key) {
+        links[a, default: []].append(b)
+        links[b, default: []].append(a)
+    }
+    for y in -1..<h {
+        for x in -1..<w {
+            let a = inside(x, y), b = inside(x + 1, y), c = inside(x + 1, y + 1), d = inside(x, y + 1)
+            let top = Key(x: 2 * x + 1, y: 2 * y), right = Key(x: 2 * x + 2, y: 2 * y + 1)
+            let bottom = Key(x: 2 * x + 1, y: 2 * y + 2), left = Key(x: 2 * x, y: 2 * y + 1)
+            if a == c && b == d && a != b {
+                // Saddle: cut off the two outside corners.
+                if a { link(top, right); link(bottom, left) } else { link(top, left); link(right, bottom) }
+                continue
+            }
+            var mixed: [Key] = []
+            if a != b { mixed.append(top) }
+            if b != c { mixed.append(right) }
+            if c != d { mixed.append(bottom) }
+            if d != a { mixed.append(left) }
+            if mixed.count == 2 { link(mixed[0], mixed[1]) }
+        }
+    }
+
+    // Walk the loops and keep the biggest (the outside edge, not any holes).
+    var visited: Set<Key> = []
+    var best: [Key] = []
+    var bestArea = 0.0
+    for start in links.keys where !visited.contains(start) {
+        var loop = [start]
+        visited.insert(start)
+        var previous = start
+        var current = links[start]![0]
+        while current != start {
+            loop.append(current)
+            visited.insert(current)
+            let next = links[current]!.first { $0 != previous } ?? start
+            previous = current
+            current = next
+        }
+        var area = 0.0
+        for i in loop.indices {
+            let (p, q) = (loop[i], loop[(i + 1) % loop.count])
+            area += Double(p.x * q.y - q.x * p.y)
+        }
+        if abs(area) > bestArea {
+            bestArea = abs(area)
+            best = loop
+        }
+    }
+
+    // Doubled grid coordinates → source pixels (pixel centres sit at +0.5).
+    let points = best.map { (x: Double($0.x) / 2 + Double(minX) + 0.5, y: Double($0.y) / 2 + Double(minY) + 0.5) }
+    return simplify(points + [points[0]], tolerance: outlineTolerance).dropLast()
+}
+
+/// Douglas–Peucker: drops points within `tolerance` of the line through their neighbours.
+func simplify(_ points: [(x: Double, y: Double)], tolerance: Double) -> [(x: Double, y: Double)] {
+    guard points.count > 2 else { return points }
+    let (first, last) = (points[0], points[points.count - 1])
+    var farthest = 0
+    var distance = 0.0
+    for i in 1..<(points.count - 1) {
+        let p = points[i]
+        let length = hypot(last.x - first.x, last.y - first.y)
+        let d = length == 0
+            ? hypot(p.x - first.x, p.y - first.y)
+            : abs((last.x - first.x) * (first.y - p.y) - (first.x - p.x) * (last.y - first.y)) / length
+        if d > distance { (farthest, distance) = (i, d) }
+    }
+    if distance <= tolerance { return [first, last] }
+    let left = simplify(Array(points[...farthest]), tolerance: tolerance)
+    let right = simplify(Array(points[farthest...]), tolerance: tolerance)
+    return left.dropLast() + right
+}
+
 // MARK: - Build
 
 let problemsURL = resources.appendingPathComponent("Problems.json")
@@ -271,6 +381,30 @@ for (set, files) in layers {
         print("  warning: \(position(key / rows, key % rows + 1)) has \(inCell.count) holds")
     }
 
+    // Each hold's outline: its edge pushed out by `outlineGap` pixels, traced and
+    // simplified, in cells from its grid point. The preview strokes it in the
+    // hold's role colour, hugging the hold whatever its shape or offset.
+    let cellPixels = (grid.dx + grid.dy) / 2
+    var outlines: [String: [Double]] = [:]
+    for (key, inCell) in holdsInCell {
+        let centre = grid.centre(column: key / rows, row: key % rows + 1)
+        var solid: [(Int, Int)] = []
+        for index in inCell {
+            let alpha = bitmaps[holds[index].layer].pixels
+            for pixel in holds[index].pixels where alpha[pixel * 4 + 3] >= outlineAlpha {
+                solid.append((pixel % width, pixel / width))
+            }
+        }
+        let loop = traceOutline(solid)
+        guard loop.count >= 6 else { fail("\(position(key / rows, key % rows + 1)): outline too small") }
+        func rounded(_ value: Double) -> Double { (value * 1000).rounded() / 1000 }
+        outlines[position(key / rows, key % rows + 1)] = loop.flatMap { point in
+            [rounded((point.x - centre.x) / cellPixels), rounded((point.y - centre.y) / cellPixels)]
+        }
+    }
+    let pointCounts = outlines.values.map { $0.count / 2 }
+    print("  outlines: \(pointCounts.min()!)–\(pointCounts.max()!) points each")
+
     // Tile size: big enough for the hold reaching furthest from its grid point.
     var reach = 0.0
     for (index, key) in cellOfHold {
@@ -323,10 +457,9 @@ for (set, files) in layers {
     sets[set] = [
         "tile": tile,
         "cell": (grid.dx + grid.dy) / 2,
-        "positions": present.sorted { a, b in
-            let (ca, cb) = (columnLetters.firstIndex(of: a.first!)!, columnLetters.firstIndex(of: b.first!)!)
-            return ca != cb ? ca < cb : Int(a.dropFirst())! < Int(b.dropFirst())!
-        },
+        // Position → outline as [x0, y0, x1, y1, …], in cells from the grid point
+        // (y down).
+        "outlines": outlines,
     ]
 }
 
