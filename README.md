@@ -292,6 +292,7 @@ without the debugger:
 | `scripts/test.sh` | unit tests (a few seconds on a warm simulator) |
 | `scripts/uitest.sh` | UI tests, e.g. Digital Crown stepping (about a minute and a half) |
 | `scripts/shots.sh DIR name "args" …` | relaunch with launch arguments and screenshot each |
+| `scripts/release.sh` | archive and upload to App Store Connect (TestFlight) |
 
 Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export|preview`
 (with `-previewZoom 3 -previewCentre 7,9` for a zoomed preview),
@@ -301,8 +302,12 @@ Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|gra
 ### Releasing through TestFlight
 
 1. Bump the build number (`CURRENT_PROJECT_VERSION`) on every target.
-2. In Xcode, choose **Any watchOS Device**, then **Product › Archive**.
-3. In the Organizer: **Distribute App › TestFlight Internal Only**.
+2. Run `scripts/release.sh`. It archives a Release build for any watchOS device and
+   uploads it to App Store Connect as **TestFlight Internal Only**
+   ([`scripts/ExportOptions.plist`](scripts/ExportOptions.plist)), signing with the
+   Apple ID signed in to Xcode. Or in Xcode: **Any watchOS Device**, **Product ›
+   Archive**, then **Distribute App › TestFlight Internal Only** in the Organizer.
+3. The build appears under TestFlight in App Store Connect once it's processed.
 
 Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the paid team.
 
