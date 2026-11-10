@@ -25,6 +25,7 @@ installed through TestFlight and isn't published on the App Store.
 
 - [How it works](#how-it-works)
   - [Session](#session)
+  - [Hold pictures](#hold-pictures)
   - [Lighting the board](#lighting-the-board)
   - [Logging attempts and sends](#logging-attempts-and-sends)
   - [Choosing problems](#choosing-problems)
@@ -60,6 +61,25 @@ The hold grid fills the left side in the board's LED colors: **green** start hol
 - **Tries** — how many attempts you've logged on this problem (see below).
 - **Star** — tap to make it a project. Starred problems are pinned to the top of the list.
 - **Light it** — sends the problem to the board.
+- **Tap the grid** for a full-screen look at the real holds (below).
+
+<br clear="right">
+
+### Hold pictures
+
+<img src="docs/screenshots/preview.png" width="200" align="right" alt="Hold pictures, whole board">
+<img src="docs/screenshots/preview-zoom.png" width="200" align="right" alt="Hold pictures, zoomed in">
+
+Tap the hold grid on Session to see the problem with **pictures of the actual holds**:
+only the problem's holds are shown, each ringed in its color (green start, blue hand,
+red finish), with faint dots where the other holds are and **A–K / 1–18** around the
+edge. Both hold sets have pictures: 2016 (sets A and B and the original school
+holds) and 2024 (sets D, E and F and the wooden holds).
+
+- **Digital Crown** — zoom in and out (up to 4×).
+- **Drag** — pan around when zoomed in. The letters and numbers stay pinned to the
+  top and left edges so you always know where you are.
+- **Double-tap** — back to the whole board.
 
 <br clear="right">
 
@@ -226,6 +246,17 @@ rerun the script and rebuild — never edit `Problems.json` by hand:
 python3 tools/build_problems.py
 ```
 
+The hold pictures (`HoldImages-2016.png`, `HoldImages-2024.png` and `HoldImages.json`
+in Resources) are built by [`tools/build_hold_images.swift`](tools/build_hold_images.swift)
+from the per-hold-set layer images in [boardsesh](https://github.com/boardsesh/boardsesh)
+(Apache-2.0), pinned to one commit. It finds each hold, fits the grid to them, cuts
+every hold out on its own and checks that every hold used by a problem has a picture.
+The hold artwork itself is Moon Climbing's.
+
+```sh
+swift tools/build_hold_images.swift
+```
+
 ## What's stored on the watch
 
 - **Problems** (SwiftData, read-only) — loaded from `Problems.json` on first launch and
@@ -252,7 +283,8 @@ without the debugger:
 | `scripts/uitest.sh` | UI tests, e.g. Digital Crown stepping (about a minute and a half) |
 | `scripts/shots.sh DIR name "args" …` | relaunch with launch arguments and screenshot each |
 
-Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export`,
+Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export|preview`
+(with `-previewZoom 3 -previewCentre 7,9` for a zoomed preview),
 `-page history|settings`, `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent|unsend`
 and `-demoLogs YES`. `-uiTesting` starts with an empty in-memory store.
 
@@ -266,11 +298,13 @@ Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the p
 
 ## Tests
 
-- **57 unit tests** (Swift Testing): the board protocol and LED numbering, the problem
+- **65 unit tests** (Swift Testing): the board protocol and LED numbering, the problem
   snapshot and its loading, list ordering and pinning, logging, undo and unsend,
-  History's day grouping, CSV export, settings and Bluetooth failure messages.
-- **4 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
-  after swiping between pages, and with a small turn.
+  History's day grouping, CSV export, settings, Bluetooth failure messages, the hold
+  pictures (every problem hold has one) and the preview's zoom and pan maths.
+- **5 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
+  after swiping between pages and after the hold-picture preview (which the Crown
+  zooms), and that a small nudge doesn't skip a problem.
 
 ## Project layout
 
@@ -279,14 +313,14 @@ Moon Dance Watch App/
   Bluetooth/   BoardProtocol (message format), BoardManager (Core Bluetooth),
                BluetoothLog, BoardFailure, BoardIdentity
   Model/       SwiftData models, AppModel, SessionModel, Logbook, History,
-               Grades, AppSettings, SnapshotLoader, LogExport
-  Views/       Session, problem list, grade picker, History, Settings,
-               Find board, Export, Bluetooth log
+               Grades, AppSettings, SnapshotLoader, LogExport, HoldImages
+  Views/       Session, hold-picture preview, problem list, grade picker,
+               History, Settings, Find board, Export, Bluetooth log
   Intents/     the "Light It" App Shortcut
-  Resources/   Problems.json
+  Resources/   Problems.json, hold picture sheets
 Moon Dance Watch AppTests/     unit tests
 Moon Dance Watch AppUITests/   UI tests
-tools/         build_problems.py
+tools/         build_problems.py, build_hold_images.swift
 scripts/       run, test, UI test and screenshot helpers
 docs/          README images
 GYM-CHECKS.md  what to verify at the board
@@ -295,12 +329,15 @@ SPEC.md        the original spec
 
 ## Known limits
 
-- **Bluetooth hasn't been tried on the real board yet.** Position numbering, Clear and
-  newer box versions are the main unknowns; see [`GYM-CHECKS.md`](GYM-CHECKS.md).
+- **Bluetooth** works on the Rocky Top box (checked November 2026). Clear leaves the
+  bottom-left light (A1) on. Only connecting when the board is free hasn't been checked
+  at the wall yet; see [`GYM-CHECKS.md`](GYM-CHECKS.md).
+- **Hold pictures** come from 650 × 1000 source images (about 50 pixels per grid
+  cell), so they turn soft past about 3× zoom.
 - **Action Button:** watchOS doesn't let an app read the Action Button or its long
   press, so logging is on screen only. The **Light It** shortcut can be assigned to the
   button (Watch › Settings › Action Button › Shortcut) or run with Siri.
 - **Export:** watchOS doesn't tell the app whether the share sheet actually sent the
   file, so "Last export" is the last time the share sheet was opened.
-- The app's problem data is MoonBoard content shared by the community; it's for
-  personal use.
+- The app's problem data and hold pictures are MoonBoard content shared by the
+  community; they're for personal use.

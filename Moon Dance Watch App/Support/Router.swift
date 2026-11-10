@@ -9,6 +9,8 @@ enum Route: Hashable {
     case bluetoothLog
     case findBoard
     case export
+    /// Full-screen hold pictures for a problem (by problem id).
+    case problemPreview(String)
 }
 
 /// The swipeable pages. Session is home; History and Settings are a swipe left.

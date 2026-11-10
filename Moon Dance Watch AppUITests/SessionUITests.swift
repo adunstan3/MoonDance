@@ -81,4 +81,23 @@ final class SessionUITests: XCTestCase {
         sleep(2)
         XCTAssertEqual(name.label, before)
     }
+
+    /// Tapping the grid opens the hold-picture preview; the Crown zooms it; back on
+    /// Session the Crown steps through problems again.
+    @MainActor
+    func testGridOpensPreviewAndCrownZooms() throws {
+        let app = launchToSession()
+        app.descendants(matching: .any)["holdGrid"].firstMatch.tap()
+        let preview = app.descendants(matching: .any)["problemPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 10))
+        let before = preview.value as? String
+        XCTAssertEqual(before, "Zoom 100 percent")
+
+        XCUIDevice.shared.rotateDigitalCrown(delta: 0.5)
+        let zoomed = expectation(for: NSPredicate(format: "value != %@", before ?? ""), evaluatedWith: preview)
+        wait(for: [zoomed], timeout: 5)
+
+        app.navigationBars.buttons.firstMatch.tap()
+        assertCrownChangesProblem(app, "after back from the preview")
+    }
 }

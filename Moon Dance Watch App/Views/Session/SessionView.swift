@@ -118,7 +118,11 @@ struct SessionView: View {
         return HStack(alignment: .top, spacing: 10) {
             HoldGridView(holds: problem.holds)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .accessibilityHint("Turn the Digital Crown for the next problem")
+                .contentShape(Rectangle())
+                .onTapGesture { router.push(.problemPreview(problem.problemId)) }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("holdGrid")
+                .accessibilityHint("Tap for hold pictures. Turn the Digital Crown for the next problem")
             SideColumn(problem: problem, stats: stats, isProject: isProject, scale: settings.gradeScale,
                        compact: nameWraps,
                        onAttempt: model.logAttempt, onSent: model.markSent, onUnsend: model.unsend,
