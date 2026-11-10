@@ -69,7 +69,8 @@ final class SessionUITests: XCTestCase {
     }
 
     /// A nudge (a tenth of a rotation) doesn't move: at the gym `.high` sensitivity
-    /// stepped on every tiny touch and was too fast. testCrownStepsToTheNextProblem
+    /// stepped on every tiny touch and was too fast, so it's `.low` now.
+    /// testCrownStepsToTheNextProblem
     /// checks a 0.3 turn still moves, so it isn't too stiff either.
     @MainActor
     func testCrownNudgeDoesNotStep() throws {
