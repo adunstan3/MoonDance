@@ -68,14 +68,16 @@ final class SessionUITests: XCTestCase {
         assertCrownChangesProblem(app, "after swiping to History and back")
     }
 
-    /// A small turn (a tenth of a rotation) is enough to move one problem.
+    /// A nudge (a tenth of a rotation) doesn't move: at the gym `.high` sensitivity
+    /// stepped on every tiny touch and was too fast. testCrownStepsToTheNextProblem
+    /// checks a 0.3 turn still moves, so it isn't too stiff either.
     @MainActor
-    func testSmallCrownTurnSteps() throws {
+    func testCrownNudgeDoesNotStep() throws {
         let app = launchToSession()
         let name = app.buttons["problemName"]
         let before = name.label
         XCUIDevice.shared.rotateDigitalCrown(delta: 0.1)
-        let changed = expectation(for: NSPredicate(format: "label != %@", before), evaluatedWith: name)
-        wait(for: [changed], timeout: 5)
+        sleep(2)
+        XCTAssertEqual(name.label, before)
     }
 }

@@ -54,7 +54,7 @@ struct SessionView: View {
         .focused($crownFocused)
         .focusEffectDisabled()
         .digitalCrownRotation($crown, from: 0, through: Double(max(session.problems.count - 1, 1)), by: 1,
-                              sensitivity: .high, isContinuous: false, isHapticFeedbackEnabled: true)
+                              sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true)
         .onChange(of: crown) { _, value in
             session.select(index: Int(value.rounded()), settings: settings)
         }
