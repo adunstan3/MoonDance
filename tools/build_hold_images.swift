@@ -189,7 +189,7 @@ func position(_ column: Int, _ row: Int) -> String { "\(columnLetters[column])\(
 /// Pixels at least this opaque count as the hold when tracing its outline.
 let outlineAlpha: UInt8 = 64
 /// How far outside the hold the outline runs, in source pixels.
-let outlineGap = 2.5
+let outlineGap = 5.0
 /// Douglas–Peucker tolerance when simplifying outlines, in source pixels.
 let outlineTolerance = 0.5
 

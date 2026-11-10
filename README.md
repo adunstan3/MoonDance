@@ -82,6 +82,11 @@ holds) and 2024 (sets D, E and F and the wooden holds).
   screen's rounding. Zoomed in, the letters and numbers stay pinned to the top and
   left edges so you always know where you are.
 - **Double-tap** — back to the whole board.
+- **Long-press a hold** — mark your **high point**, the furthest hand hold you've
+  reached. It's outlined in **gold**, and on Session it shows as a gold dot inside that
+  hold's blue ring. A problem has one high point: marking another hold moves it, and
+  long-pressing it again clears it. Start holds can't be a high point, and
+  long-pressing the **finish** hold logs the problem as **sent**.
 - **‹ Back** (top left, on the clock's line) — back to Session.
 
 <br clear="right">
@@ -265,9 +270,10 @@ swift tools/build_hold_images.swift
 
 - **Problems** (SwiftData, read-only) — loaded from `Problems.json` on first launch and
   replaced only when a new snapshot ships.
-- **Logs** (`LogEntry`: problem, hold set, time, attempt or send) and **projects**
-  (`Project`: starred problems) — kept separately and keyed by the problem's id, so
-  they survive a new snapshot.
+- **Logs** (`LogEntry`: problem, hold set, time, attempt or send), **projects**
+  (`Project`: starred problems) and **high points** (`HighPoint`: one hold per
+  problem) — kept separately and keyed by the problem's id, so they survive a new
+  snapshot.
 - **Settings** (UserDefaults) — hold set, grade scale, saved board, last grade picked,
   Benchmarks only, last export date.
 
@@ -290,7 +296,7 @@ without the debugger:
 Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export|preview`
 (with `-previewZoom 3 -previewCentre 7,9` for a zoomed preview),
 `-page history|settings`, `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent|unsend`
-and `-demoLogs YES`. `-uiTesting` starts with an empty in-memory store.
+`-demoLogs YES` and `-demoHighPoint YES`. `-uiTesting` starts with an empty in-memory store.
 
 ### Releasing through TestFlight
 
@@ -302,13 +308,15 @@ Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the p
 
 ## Tests
 
-- **68 unit tests** (Swift Testing): the board protocol and LED numbering, the problem
+- **74 unit tests** (Swift Testing): the board protocol and LED numbering, the problem
   snapshot and its loading, list ordering and pinning, logging, undo and unsend,
   History's day grouping, CSV export, settings, Bluetooth failure messages, the hold
-  pictures and outlines (every problem hold has them) and the preview's zoom and pan maths.
-- **5 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
+  pictures and outlines (every problem hold has them), the preview's zoom and pan maths,
+  and high points (one per problem, start holds refused, the finish logs a send).
+- **6 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
   after swiping between pages and after the hold-picture preview (which the Crown
-  zooms), and that a small nudge doesn't skip a problem.
+  zooms), that a small nudge doesn't skip a problem, and long-pressing holds in the
+  preview (high point, start hold refused) plus double-tap to reset the zoom.
 
 ## Project layout
 

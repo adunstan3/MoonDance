@@ -14,6 +14,7 @@ struct SessionView: View {
     @Environment(BannerModel.self) private var banner
     @Query private var logs: [LogEntry]
     @Query private var projects: [Project]
+    @Query private var highPoints: [HighPoint]
 
     @State private var crown: Double = 0
     @FocusState private var crownFocused: Bool
@@ -116,7 +117,9 @@ struct SessionView: View {
         // included, is in the column on the right. A two-line name pushes both down
         // and the column tightens up.
         return HStack(alignment: .top, spacing: 10) {
-            HoldGridView(holds: problem.holds)
+            HoldGridView(holds: problem.holds, highPoint: highPoints.first {
+                $0.problemId == problem.problemId && $0.holdSet == problem.holdSet
+            }?.position)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .contentShape(Rectangle())
                 .onTapGesture { router.push(.problemPreview(problem.problemId)) }

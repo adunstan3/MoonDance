@@ -81,6 +81,28 @@ enum Logbook {
         return false
     }
 
+    /// The problem's high point (a grid position such as "G13"), if any.
+    static func highPoint(for problem: Problem, in context: ModelContext) -> String? {
+        highPoints(for: problem, in: context).first?.position
+    }
+
+    /// Sets the problem's one high point, replacing any other; nil removes it.
+    static func setHighPoint(_ position: String?, for problem: Problem, in context: ModelContext,
+                             at date: Date = .now) {
+        highPoints(for: problem, in: context).forEach(context.delete)
+        if let position {
+            context.insert(HighPoint(problemId: problem.problemId, holdSet: problem.holdSet, position: position, date: date))
+        }
+        try? context.save()
+    }
+
+    private static func highPoints(for problem: Problem, in context: ModelContext) -> [HighPoint] {
+        let id = problem.problemId
+        let set = problem.holdSet
+        let descriptor = FetchDescriptor<HighPoint>(predicate: #Predicate { $0.problemId == id && $0.holdSet == set })
+        return (try? context.fetch(descriptor)) ?? []
+    }
+
     private static func projects(for problem: Problem, in context: ModelContext) -> [Project] {
         let id = problem.problemId
         let set = problem.holdSet

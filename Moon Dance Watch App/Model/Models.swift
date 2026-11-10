@@ -69,8 +69,26 @@ final class Project {
     }
 }
 
+/// The furthest hold reached on a problem: one per problem and hold set, set by
+/// long-pressing a hand hold in the hold-picture preview.
+@Model
+final class HighPoint {
+    var problemId: String
+    var holdSet: String
+    /// Grid position, e.g. "G13".
+    var position: String
+    var date: Date
+
+    init(problemId: String, holdSet: String, position: String, date: Date = .now) {
+        self.problemId = problemId
+        self.holdSet = holdSet
+        self.position = position
+        self.date = date
+    }
+}
+
 enum Store {
-    static let models: [any PersistentModel.Type] = [Problem.self, LogEntry.self, Project.self]
+    static let models: [any PersistentModel.Type] = [Problem.self, LogEntry.self, Project.self, HighPoint.self]
 
     static func makeContainer(inMemory: Bool = false) throws -> ModelContainer {
         let schema = Schema(models)

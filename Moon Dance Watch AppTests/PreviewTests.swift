@@ -52,7 +52,8 @@ struct HoldImagesTests {
                 let outline = try #require(info.outline(for: GridPosition(position)!))
                 #expect(outline.count >= 6)
                 let reach = outline.map { hypot($0.x, $0.y) }.max()!
-                #expect(reach < info.tileInCells / 2 + 0.1, "\(position) outline leaves its tile")
+                // The tile holds the hold; the outline runs about a tenth of a cell outside it.
+                #expect(reach < info.tileInCells / 2 + 0.2, "\(position) outline is too far out")
                 #expect(reach > 0.1, "\(position) outline is too small")
             }
         }

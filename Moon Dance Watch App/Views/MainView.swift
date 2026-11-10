@@ -66,6 +66,10 @@ struct MainView: View {
     /// `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent`, `-demoLogs YES`.
     private func applyDebugLaunchArguments() {
         #if DEBUG
+        if RuntimeEnvironment.debugValue("demoHighPoint") != nil, let problem = session.current,
+           let hand = problem.holds.first(where: { $0.role == .hand }) {
+            Logbook.setHighPoint(hand.position, for: problem, in: context)
+        }
         if RuntimeEnvironment.debugValue("demoLogs") != nil {
             DemoData.addLogs(context: context, settings: settings)
             reload()

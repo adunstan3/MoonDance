@@ -5,6 +5,8 @@ import SwiftUI
 /// space it's given, so rows may be spaced a little further apart than columns.
 struct HoldGridView: View {
     let holds: [Hold]
+    /// Your high point ("G13"): a bigger gold dot inside its ring.
+    var highPoint: String?
 
     var body: some View {
         Canvas { context, size in
@@ -16,6 +18,12 @@ struct HoldGridView: View {
                     let rect = CGRect(x: center.x - dot, y: center.y - dot, width: dot * 2, height: dot * 2)
                     context.fill(Path(ellipseIn: rect), with: .color(Color(white: 0.32)))
                 }
+            }
+            if let highPoint, let position = GridPosition(highPoint) {
+                let center = layout.center(column: position.column, row: position.row)
+                let gold = layout.cell * 0.24
+                context.fill(Path(ellipseIn: CGRect(x: center.x - gold, y: center.y - gold, width: gold * 2, height: gold * 2)),
+                             with: .color(Theme.gold))
             }
             let radius = layout.cell * 0.46
             let line = max(1.5, layout.cell * 0.13)
@@ -34,7 +42,8 @@ struct HoldGridView: View {
         func list(_ role: HoldRole) -> String {
             holds.filter { $0.role == role }.map(\.position).joined(separator: ", ")
         }
-        return "Start \(list(.start)). Hands \(list(.hand)). Finish \(list(.finish))."
+        let high = highPoint.map { " High point \($0)." } ?? ""
+        return "Start \(list(.start)). Hands \(list(.hand)). Finish \(list(.finish)).\(high)"
     }
 }
 

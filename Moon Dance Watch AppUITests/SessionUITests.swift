@@ -100,4 +100,44 @@ final class SessionUITests: XCTestCase {
         app.buttons["previewBack"].tap()
         assertCrownChangesProblem(app, "after back from the preview")
     }
+
+    /// Where a grid position is drawn in the preview at zoom 1, as a coordinate
+    /// in the app's window. Mirrors PreviewGeometry: 1-cell gutters left and top,
+    /// a 0.25-cell margin right and bottom, 36 pt reserved at the top and 8 at the
+    /// bottom, the board fitted and centred.
+    @MainActor
+    private func previewPoint(_ app: XCUIApplication, column: Int, row: Int) -> XCUICoordinate {
+        let size = app.windows.firstMatch.frame.size
+        let (top, bottom) = (36.0, 8.0)
+        let viewport = CGRect(x: 0, y: top, width: size.width, height: size.height - top - bottom)
+        let (boardWidth, boardHeight) = (12.25, 19.25)
+        let scale = min(viewport.width / boardWidth, viewport.height / boardHeight)
+        let x = viewport.midX + (1 + Double(column) + 0.5 - boardWidth / 2) * scale
+        let y = viewport.midY + (1 + Double(18 - row) + 0.5 - boardHeight / 2) * scale
+        return app.windows.firstMatch.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: x, dy: y))
+    }
+
+    /// Long-press a hand hold for a high point, a start hold is refused, and a
+    /// double-tap after zooming goes back to the whole board. The first problem
+    /// under -uiTesting starts on E5 and F5 with a hand hold on E9.
+    @MainActor
+    func testLongPressMarksHighPoint() throws {
+        let app = launchToSession()
+        app.descendants(matching: .any)["holdGrid"].firstMatch.tap()
+        let preview = app.descendants(matching: .any)["problemPreview"].firstMatch
+        XCTAssertTrue(preview.waitForExistence(timeout: 10))
+
+        previewPoint(app, column: 4, row: 9).press(forDuration: 0.7)
+        XCTAssertTrue(app.staticTexts["High point E9"].waitForExistence(timeout: 3))
+
+        previewPoint(app, column: 4, row: 5).press(forDuration: 0.7)
+        XCTAssertTrue(app.staticTexts["Start holds can't be a high point"].waitForExistence(timeout: 3))
+
+        XCUIDevice.shared.rotateDigitalCrown(delta: 0.5)
+        let zoomed = expectation(for: NSPredicate(format: "value != %@", "Zoom 100 percent"), evaluatedWith: preview)
+        wait(for: [zoomed], timeout: 5)
+        preview.doubleTap()
+        let reset = expectation(for: NSPredicate(format: "value == %@", "Zoom 100 percent"), evaluatedWith: preview)
+        wait(for: [reset], timeout: 5)
+    }
 }

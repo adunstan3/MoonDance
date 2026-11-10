@@ -98,6 +98,10 @@ final class AppModel {
 
     func markSent() {
         guard let problem = currentProblem else { return }
+        send(problem)
+    }
+
+    private func send(_ problem: Problem) {
         let entry = Logbook.logSend(problem, in: context)
         banner.show(.init(kind: .sent, text: "Sent", entryID: entry.id, problemID: problem.problemId))
         WKInterfaceDevice.current().play(.success)
@@ -124,6 +128,46 @@ final class AppModel {
         }
         banner.dismiss()
         WKInterfaceDevice.current().play(.directionDown)
+    }
+
+    enum HighPointResult: Equatable {
+        /// This hand hold is now the high point (replacing any other).
+        case marked(String)
+        /// It already was; now there's none.
+        case cleared
+        /// It's the finish hold, so the problem was logged as sent.
+        case sent
+        /// Start holds can't be a high point.
+        case startHold
+        /// That position isn't one of the problem's holds.
+        case notInProblem
+    }
+
+    /// Long-press on a hold in the preview. One high point per problem: marking a
+    /// hand hold replaces the old one (or clears it if it's the same hold); the
+    /// finish hold logs a send instead; start holds can't be marked.
+    @discardableResult
+    func markHighPoint(_ position: GridPosition, on problem: Problem) -> HighPointResult {
+        guard let hold = problem.holds.first(where: { GridPosition($0.position) == position }) else {
+            return .notInProblem
+        }
+        switch hold.role {
+        case .start:
+            WKInterfaceDevice.current().play(.failure)
+            return .startHold
+        case .finish:
+            send(problem)
+            return .sent
+        case .hand:
+            if Logbook.highPoint(for: problem, in: context) == position.name {
+                Logbook.setHighPoint(nil, for: problem, in: context)
+                WKInterfaceDevice.current().play(.directionDown)
+                return .cleared
+            }
+            Logbook.setHighPoint(position.name, for: problem, in: context)
+            WKInterfaceDevice.current().play(.success)
+            return .marked(position.name)
+        }
     }
 
     /// Stars or unstars the current problem; starred problems pin to the top of the list.
