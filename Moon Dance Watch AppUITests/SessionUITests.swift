@@ -97,7 +97,7 @@ final class SessionUITests: XCTestCase {
         let zoomed = expectation(for: NSPredicate(format: "value != %@", before ?? ""), evaluatedWith: preview)
         wait(for: [zoomed], timeout: 5)
 
-        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["previewBack"].tap()
         assertCrownChangesProblem(app, "after back from the preview")
     }
 }

@@ -77,9 +77,11 @@ edge. Both hold sets have pictures: 2016 (sets A and B and the original school
 holds) and 2024 (sets D, E and F and the wooden holds).
 
 - **Digital Crown** — zoom in and out (up to 4×).
-- **Drag** — pan around when zoomed in. The letters and numbers stay pinned to the
-  top and left edges so you always know where you are.
+- **Drag** — pan around, a little past every edge so holds in the corners clear the
+  screen's rounding. Zoomed in, the letters and numbers stay pinned to the top and
+  left edges so you always know where you are.
 - **Double-tap** — back to the whole board.
+- **‹ Back** (top left, on the clock's line) — back to Session.
 
 <br clear="right">
 
@@ -298,7 +300,7 @@ Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the p
 
 ## Tests
 
-- **65 unit tests** (Swift Testing): the board protocol and LED numbering, the problem
+- **66 unit tests** (Swift Testing): the board protocol and LED numbering, the problem
   snapshot and its loading, list ordering and pinning, logging, undo and unsend,
   History's day grouping, CSV export, settings, Bluetooth failure messages, the hold
   pictures (every problem hold has one) and the preview's zoom and pan maths.

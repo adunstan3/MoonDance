@@ -5,52 +5,54 @@ import SwiftUI
 /// problem's holds, each ringed in its role's color (green start, blue hand,
 /// red finish), with A–K and 1–18 around the edge.
 ///
-/// Turn the Digital Crown to zoom (about the middle of the screen), drag to pan,
-/// double-tap to see the whole board again.
+/// Turn the Digital Crown to zoom (about the middle of the screen), drag to pan
+/// (a little past every edge, so corners clear the screen's rounding), double-tap
+/// to see the whole board again. A small "Back" on the clock's line goes back.
 struct ProblemPreviewView: View {
     let problemID: String
 
     @Environment(\.modelContext) private var context
+    @Environment(Router.self) private var router
     @State private var problem: Problem?
     @State private var zoom = 1.0
     @State private var centre = PreviewGeometry.boardCentre
     @State private var dragStart: CGPoint?
-    @State private var size = CGSize(width: 1, height: 1)
     @FocusState private var crownFocused: Bool
 
-    private var geometry: PreviewGeometry {
-        PreviewGeometry(size: size, zoom: zoom, centre: centre)
-    }
-
     var body: some View {
-        Canvas { context, size in
-            guard let problem else { return }
-            let geometry = PreviewGeometry(size: size, zoom: zoom, centre: centre)
-            Self.draw(problem, geometry: geometry, in: &context)
+        // One size (the whole screen) for drawing, panning and zoom limits.
+        GeometryReader { proxy in
+            let size = proxy.size
+            Canvas { context, canvasSize in
+                guard let problem else { return }
+                let geometry = PreviewGeometry(size: canvasSize, zoom: zoom, centre: centre)
+                Self.draw(problem, geometry: geometry, in: &context)
+            }
+            .contentShape(Rectangle())
+            .gesture(pan(size: size))
+            .onTapGesture(count: 2) {
+                withAnimation(.snappy) {
+                    zoom = 1
+                    centre = PreviewGeometry.boardCentre
+                }
+            }
+            .onChange(of: zoom) { centre = PreviewGeometry(size: size, zoom: zoom, centre: centre).centre }
+            .accessibilityElement()
+            .accessibilityIdentifier("problemPreview")
+            .accessibilityLabel(problem.map { "Hold pictures for \($0.name)" } ?? "Problem preview")
+            .accessibilityValue("Zoom \(Int((zoom * 100).rounded())) percent")
+            .accessibilityHint("Turn the Digital Crown to zoom, drag to look around, double-tap to reset")
         }
         .background(Theme.background)
         .ignoresSafeArea()
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
-        .contentShape(Rectangle())
-        .gesture(pan)
-        .onTapGesture(count: 2) {
-            withAnimation(.snappy) {
-                zoom = 1
-                centre = PreviewGeometry.boardCentre
-            }
-        }
+        .overlay(alignment: .topLeading) { backButton }
+        .toolbar(.hidden, for: .navigationBar)
         .focusable()
         .focused($crownFocused)
         .focusEffectDisabled()
         .digitalCrownRotation($zoom, from: PreviewGeometry.zoomRange.lowerBound,
                               through: PreviewGeometry.zoomRange.upperBound,
                               sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: false)
-        .onChange(of: zoom) { centre = geometry.clamped(centre) }
-        .accessibilityElement()
-        .accessibilityIdentifier("problemPreview")
-        .accessibilityLabel(problem.map { "Hold pictures for \($0.name)" } ?? "Problem preview")
-        .accessibilityValue("Zoom \(Int((zoom * 100).rounded())) percent")
-        .accessibilityHint("Turn the Digital Crown to zoom, drag to look around, double-tap to reset")
         .onAppear {
             problem = SessionModel.problem(id: problemID, context: context)
             crownFocused = true
@@ -63,9 +65,33 @@ struct ProblemPreviewView: View {
         }
     }
 
-    private var pan: some Gesture {
+    /// Small text on the clock's line instead of the big round back button, so the
+    /// board gets the room. Lines up with the problem name on Session.
+    private var backButton: some View {
+        Button {
+            router.pop()
+        } label: {
+            HStack(spacing: 2) {
+                Image(systemName: "chevron.left")
+                Text("Back")
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.blue)
+            .frame(minHeight: SessionView.Header.height)
+            .padding(.trailing, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, SessionView.Header.top)
+        .padding(.leading, SessionView.Header.leading - 4)
+        .ignoresSafeArea()
+        .accessibilityIdentifier("previewBack")
+    }
+
+    private func pan(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 4)
             .onChanged { value in
+                let geometry = PreviewGeometry(size: size, zoom: zoom, centre: centre)
                 let start = dragStart ?? geometry.centre
                 dragStart = start
                 let scale = geometry.scale
@@ -153,14 +179,19 @@ struct ProblemPreviewView: View {
 nonisolated struct PreviewGeometry {
     static let gutterLeft = 1.0
     static let gutterTop = 1.0
-    /// Space on the right and bottom so rings on column K and row 1 aren't cut off.
+    /// Space on the right and bottom so rings on column K and row 1 fit.
     static let margin = 0.25
     static let boardWidth = Double(GridPosition.columns) + gutterLeft + margin
     static let boardHeight = Double(GridPosition.rows) + gutterTop + margin
     static let boardCentre = CGPoint(x: boardWidth / 2, y: boardHeight / 2)
     static let zoomRange: ClosedRange<Double> = 1...4
-    /// Room left at the top for the back button and clock, in points.
-    static let topInset: CGFloat = 30
+    /// Room left at the top for Back and the clock, in points.
+    static let topInset: CGFloat = 36
+    /// Room at the bottom, so row 1 sits clear of the screen's rounded corners.
+    static let bottomInset: CGFloat = 8
+    /// How far (in points) you can pan past each edge of the board, so holds in the
+    /// corners can be moved clear of the screen's rounding.
+    static let overscroll: CGFloat = 20
     /// Ring radius, in cells.
     static let ringRadius = 0.62
 
@@ -178,7 +209,8 @@ nonisolated struct PreviewGeometry {
 
     /// The area the whole board fits in at zoom 1: below the clock line.
     var viewport: CGRect {
-        CGRect(x: 0, y: Self.topInset, width: size.width, height: max(1, size.height - Self.topInset))
+        CGRect(x: 0, y: Self.topInset, width: size.width,
+               height: max(1, size.height - Self.topInset - Self.bottomInset))
     }
 
     var fitScale: CGFloat { min(viewport.width / Self.boardWidth, viewport.height / Self.boardHeight) }
@@ -195,19 +227,18 @@ nonisolated struct PreviewGeometry {
                     boardY: Self.gutterTop + CGFloat(GridPosition.rows - row) + 0.5)
     }
 
-    /// Keeps the board on screen: where it's wider than the screen, no further
-    /// than its edge. Where it fits across, it sits against the right edge, clear
-    /// of the round back button at the top left.
+    /// Keeps the board on screen. Along an axis where it's bigger than the
+    /// viewport you can pan until its edge meets the viewport's edge; where it fits,
+    /// it stays centred. Either way you can go `overscroll` points further.
     func clamped(_ point: CGPoint) -> CGPoint {
-        let halfWidth = viewport.width / (2 * scale)
-        let halfHeight = viewport.height / (2 * scale)
-        let x = Self.boardWidth <= 2 * halfWidth
-            ? Self.boardWidth - halfWidth
-            : min(max(point.x, halfWidth), Self.boardWidth - halfWidth)
-        let y = Self.boardHeight <= 2 * halfHeight
-            ? Self.boardHeight / 2
-            : min(max(point.y, halfHeight), Self.boardHeight - halfHeight)
-        return CGPoint(x: x, y: y)
+        let over = Self.overscroll / scale
+        func axis(_ value: CGFloat, board: CGFloat, half: CGFloat) -> CGFloat {
+            let low = min(half, board / 2) - over
+            let high = max(board - half, board / 2) + over
+            return min(max(value, low), high)
+        }
+        return CGPoint(x: axis(point.x, board: Self.boardWidth, half: viewport.width / (2 * scale)),
+                       y: axis(point.y, board: Self.boardHeight, half: viewport.height / (2 * scale)))
     }
 
     /// Where the column letters go: in their gutter, or pinned under the clock line

@@ -51,42 +51,52 @@ struct HoldImagesTests {
 struct PreviewGeometryTests {
     private let watch = CGSize(width: 205, height: 251)
 
-    @Test func wholeBoardFitsAtZoomOne() {
+    @Test func wholeBoardFitsCentredAtZoomOne() {
         let g = PreviewGeometry(size: watch, zoom: 1, centre: PreviewGeometry.boardCentre)
         let topLeft = g.screenPoint(column: 0, row: 18)
         let bottomRight = g.screenPoint(column: 10, row: 1)
         let ring = g.scale * PreviewGeometry.ringRadius
         #expect(topLeft.y - g.scale / 2 >= PreviewGeometry.topInset - 0.5)
-        #expect(bottomRight.y + ring <= watch.height, "row 1 rings fit")
-        #expect(topLeft.x - g.scale / 2 >= 0)
+        #expect(bottomRight.y + ring <= watch.height - PreviewGeometry.bottomInset, "row 1 rings fit")
         #expect(bottomRight.x + ring <= watch.width, "column K rings fit")
-        #expect(watch.width - (bottomRight.x + g.scale / 2) < g.scale / 2, "board sits against the right edge")
-        // The back button sits top left: column A (and its letter) start well clear of it.
-        #expect(topLeft.x - g.scale / 2 > 55)
-        // Nothing to pan at zoom 1.
-        #expect(g.clamped(CGPoint(x: 0, y: 0)) == g.centre)
+        // Centred: the same space either side of the board (gutter and margin included).
+        let left = g.screenPoint(boardX: 0, boardY: 0).x
+        let right = watch.width - g.screenPoint(boardX: PreviewGeometry.boardWidth, boardY: 0).x
+        #expect(abs(left - right) < 0.001)
+    }
+
+    @Test func zoomOneStillPansALittle() {
+        let g = PreviewGeometry(size: watch, zoom: 1, centre: PreviewGeometry.boardCentre)
+        let moved = PreviewGeometry(size: watch, zoom: 1, centre: CGPoint(x: -100, y: -100))
+        let shift = moved.screenPoint(boardX: 0, boardY: 0).x - g.screenPoint(boardX: 0, boardY: 0).x
+        #expect(abs(shift - PreviewGeometry.overscroll) < 0.001)
     }
 
     @Test func zoomScalesAboutTheMiddleOfTheScreen() {
-        let one = PreviewGeometry(size: watch, zoom: 2, centre: PreviewGeometry.boardCentre)
+        let two = PreviewGeometry(size: watch, zoom: 2, centre: PreviewGeometry.boardCentre)
         let three = PreviewGeometry(size: watch, zoom: 3, centre: PreviewGeometry.boardCentre)
-        #expect(abs(three.scale - one.scale * 1.5) < 0.001)
+        #expect(abs(three.scale - two.scale * 1.5) < 0.001)
         let middle = PreviewGeometry.boardCentre
-        #expect(one.screenPoint(boardX: middle.x, boardY: middle.y) == three.screenPoint(boardX: middle.x, boardY: middle.y))
+        #expect(two.screenPoint(boardX: middle.x, boardY: middle.y) == three.screenPoint(boardX: middle.x, boardY: middle.y))
     }
 
-    @Test func panningStopsAtTheBoardEdges() {
-        let g = PreviewGeometry(size: watch, zoom: 4, centre: PreviewGeometry.boardCentre)
-        let farTopLeft = g.clamped(CGPoint(x: -50, y: -50))
-        let farBottomRight = g.clamped(CGPoint(x: 500, y: 500))
-        // The board's corners land exactly on the viewport's corners.
-        let shownTopLeft = PreviewGeometry(size: watch, zoom: 4, centre: farTopLeft).screenPoint(boardX: 0, boardY: 0)
-        #expect(abs(shownTopLeft.x) < 0.001)
-        #expect(abs(shownTopLeft.y - PreviewGeometry.topInset) < 0.001)
-        let shownBottomRight = PreviewGeometry(size: watch, zoom: 4, centre: farBottomRight)
-            .screenPoint(boardX: PreviewGeometry.boardWidth, boardY: PreviewGeometry.boardHeight)
-        #expect(abs(shownBottomRight.x - watch.width) < 0.001)
-        #expect(abs(shownBottomRight.y - watch.height) < 0.001)
+    /// Zoomed in, every edge can be reached, and a little past it, so column K,
+    /// row 1 and the corners are never cut off.
+    @Test func panningReachesEveryEdgeAndALittleBeyond() {
+        let over = PreviewGeometry.overscroll
+        for zoom in [2.0, 3.0, 4.0] {
+            let topLeft = PreviewGeometry(size: watch, zoom: zoom, centre: CGPoint(x: -50, y: -50))
+            let corner = topLeft.screenPoint(boardX: 0, boardY: 0)
+            #expect(abs(corner.x - over) < 0.001)
+            #expect(abs(corner.y - (PreviewGeometry.topInset + over)) < 0.001)
+
+            let bottomRight = PreviewGeometry(size: watch, zoom: zoom, centre: CGPoint(x: 500, y: 500))
+            let far = bottomRight.screenPoint(boardX: PreviewGeometry.boardWidth, boardY: PreviewGeometry.boardHeight)
+            #expect(abs(far.x - (watch.width - over)) < 0.001)
+            #expect(abs(far.y - (watch.height - PreviewGeometry.bottomInset - over)) < 0.001)
+            let k1 = bottomRight.screenPoint(column: 10, row: 1)
+            #expect(k1.x + bottomRight.scale * PreviewGeometry.ringRadius < watch.width - over)
+        }
     }
 
     @Test func labelsPinWhenTheirGutterScrollsOff() {
