@@ -2,6 +2,7 @@
 # Runs the UI tests (slow: they launch the app) on the "Moondance Tests" simulator.
 # Usage: scripts/uitest.sh [extra xcodebuild args]
 set -euo pipefail
+source "$(dirname "$0")/lock.sh"
 cd "$(dirname "$0")/.."
 DERIVED="${DERIVED:-build/DerivedData}"
 SIM_ID=$("scripts/sim.sh")

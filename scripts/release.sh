@@ -5,6 +5,7 @@
 # Uses the Apple ID signed in to Xcode (Settings › Accounts) for signing and upload.
 # Usage: scripts/release.sh
 set -euo pipefail
+source "$(dirname "$0")/lock.sh"
 cd "$(dirname "$0")/.."
 
 ARCHIVE=build/Moondance.xcarchive

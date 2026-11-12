@@ -2,6 +2,7 @@
 # Relaunches the installed app once per argument set and screenshots each.
 # Usage: scripts/shots.sh OUT_DIR name "launch args" [name "launch args"]...
 set -euo pipefail
+source "$(dirname "$0")/lock.sh"
 OUT="$1"; shift
 SIM_ID=$("$(dirname "$0")/sim.sh")
 BUNDLE_ID="com.andrewdunstan.Moondance.watchkitapp"
