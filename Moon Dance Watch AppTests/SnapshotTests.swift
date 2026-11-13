@@ -63,6 +63,20 @@ struct SnapshotTests {
         #expect(try context.fetchCount(FetchDescriptor<Problem>()) == count)
     }
 
+    /// Launch reads only the start of Problems.json; it must agree with a full decode.
+    @Test func peekedVersionMatchesTheFullDecode() throws {
+        let url = try #require(SnapshotLoader.bundledSnapshotURL())
+        #expect(SnapshotLoader.peekVersion(at: url) == (try bundled().version))
+    }
+
+    @Test func versionAfterTheProblemsIsNotPeeked() throws {
+        let json = #"{"problems":[],"version":"late","source":"test"}"#
+        let url = FileManager.default.temporaryDirectory.appending(path: "late-\(UUID().uuidString).json")
+        try Data(json.utf8).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(SnapshotLoader.peekVersion(at: url) == nil)
+    }
+
     @Test func newSnapshotReplacesProblemsButKeepsLogsAndProjects() throws {
         let container = try Store.makeContainer(inMemory: true)
         let context = container.mainContext

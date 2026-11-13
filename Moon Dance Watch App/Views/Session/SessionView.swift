@@ -12,9 +12,6 @@ struct SessionView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(Router.self) private var router
     @Environment(BannerModel.self) private var banner
-    @Query private var logs: [LogEntry]
-    @Query private var projects: [Project]
-    @Query private var highPoints: [HighPoint]
 
     @State private var crown: Double = 0
     @FocusState private var crownFocused: Bool
@@ -36,7 +33,7 @@ struct SessionView: View {
             header
             Group {
                 if let problem = session.current {
-                    content(for: problem)
+                    SessionProblemView(problem: problem, compact: nameWraps)
                 } else {
                     emptyState.frame(maxHeight: .infinity)
                 }
@@ -110,34 +107,6 @@ struct SessionView: View {
         }
     }
 
-    private func content(for problem: Problem) -> some View {
-        let stats = LogStats(entries: logs, holdSet: problem.holdSet)[problem.problemId]
-        let isProject = projects.contains { $0.problemId == problem.problemId && $0.holdSet == problem.holdSet }
-        // The grid takes the full height on the left; everything else, Light it
-        // included, is in the column on the right. A two-line name pushes both down
-        // and the column tightens up.
-        return HStack(alignment: .top, spacing: 10) {
-            HoldGridView(holds: problem.holds, holdSet: problem.holdSet, highPoint: highPoints.first {
-                $0.problemId == problem.problemId && $0.holdSet == problem.holdSet
-            }?.position)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .contentShape(Rectangle())
-                .onTapGesture { router.push(.problemPreview(problem.problemId)) }
-                .accessibilityAddTraits(.isButton)
-                .accessibilityIdentifier("holdGrid")
-                .accessibilityHint("Tap for hold pictures. Turn the Digital Crown for the next problem")
-            SideColumn(problem: problem, stats: stats, isProject: isProject, scale: settings.gradeScale,
-                       compact: nameWraps,
-                       onAttempt: model.logAttempt, onSent: model.markSent, onUnsend: model.unsend,
-                       onStar: model.toggleProject)
-                .frame(width: SideColumn.width)
-        }
-        .padding(.top, 8)
-        .padding(.leading, 10)
-        .padding(.trailing, 6)
-        .padding(.bottom, 12)
-    }
-
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "list.bullet")
@@ -148,6 +117,58 @@ struct SessionView: View {
             Button("Pick a grade") { router.push(.gradePicker) }
                 .tint(Theme.blue)
         }
+    }
+}
+
+/// The current problem's grid and side column. Its queries fetch only this
+/// problem's log, star and high point, so stepping with the Crown doesn't
+/// recount the whole log.
+private struct SessionProblemView: View {
+    let problem: Problem
+    /// Tighter side column when the problem name takes two lines.
+    let compact: Bool
+
+    @Environment(AppModel.self) private var model
+    @Environment(AppSettings.self) private var settings
+    @Environment(Router.self) private var router
+    @Query private var logs: [LogEntry]
+    @Query private var projects: [Project]
+    @Query private var highPoints: [HighPoint]
+
+    init(problem: Problem, compact: Bool) {
+        self.problem = problem
+        self.compact = compact
+        let id = problem.problemId
+        let set = problem.holdSet
+        _logs = Query(filter: #Predicate<LogEntry> { $0.problemId == id && $0.holdSet == set })
+        _projects = Query(filter: #Predicate<Project> { $0.problemId == id && $0.holdSet == set })
+        _highPoints = Query(filter: #Predicate<HighPoint> { $0.problemId == id && $0.holdSet == set })
+    }
+
+    var body: some View {
+        let stats = LogStats(entries: logs)[problem.problemId]
+        let isProject = !projects.isEmpty
+        // The grid takes the full height on the left; everything else, Light it
+        // included, is in the column on the right. A two-line name pushes both down
+        // and the column tightens up.
+        return HStack(alignment: .top, spacing: 10) {
+            HoldGridView(holds: problem.holds, holdSet: problem.holdSet, highPoint: highPoints.first?.position)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .contentShape(Rectangle())
+                .onTapGesture { router.push(.problemPreview(problem.problemId)) }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("holdGrid")
+                .accessibilityHint("Tap for hold pictures. Turn the Digital Crown for the next problem")
+            SideColumn(problem: problem, stats: stats, isProject: isProject, scale: settings.gradeScale,
+                       compact: compact,
+                       onAttempt: model.logAttempt, onSent: model.markSent, onUnsend: model.unsend,
+                       onStar: model.toggleProject)
+                .frame(width: SideColumn.width)
+        }
+        .padding(.top, 8)
+        .padding(.leading, 10)
+        .padding(.trailing, 6)
+        .padding(.bottom, 12)
     }
 }
 

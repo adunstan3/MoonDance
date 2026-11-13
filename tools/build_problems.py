@@ -125,6 +125,8 @@ def main():
     if len(ids) != len(set(ids)):
         sys.exit("error: duplicate problem ids")
 
+    # "version" must stay the first key: the app reads it from the file's first
+    # bytes on every launch (SnapshotLoader.peekVersion) instead of parsing it all.
     snapshot = {
         "version": f"{DATASET_COMMIT[:7]}-{len(everything)}",
         "source": f"github.com/{DATASET_REPO}@{DATASET_COMMIT[:7]} (boardsesh)",

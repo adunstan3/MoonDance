@@ -39,15 +39,33 @@ enum SnapshotLoader {
         try JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: url))
     }
 
+    /// The snapshot's version, read from the first few hundred bytes instead of
+    /// parsing the whole 1 MB file (tools/build_problems.py writes "version" first).
+    /// Nil if it isn't there, and the caller falls back to a full decode.
+    nonisolated static func peekVersion(at url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let data = try? handle.read(upToCount: 512) else { return nil }
+        let head = String(decoding: data, as: UTF8.self)
+        // Only trust a "version" that comes before the problem list starts.
+        let beforeProblems = head.components(separatedBy: "\"problems\"").first ?? head
+        guard let match = beforeProblems.firstMatch(of: /"version"\s*:\s*"([^"]*)"/) else { return nil }
+        return String(match.1)
+    }
+
     /// Loads the snapshot if the store doesn't already hold this version.
     /// Returns true if problems were (re)loaded. On failure the version isn't saved,
-    /// so the next launch tries again.
+    /// so the next launch tries again. Usually only the file's first bytes are read.
     @discardableResult
     static func loadIfNeeded(into context: ModelContext, from url: URL?, defaults: UserDefaults = .standard) throws -> Bool {
         guard let url else { throw LoadError.missingFile }
-        let snapshot = try decode(from: url)
         let existing = try context.fetchCount(FetchDescriptor<Problem>())
-        if defaults.string(forKey: versionKey) == snapshot.version && existing > 0 {
+        let stored = defaults.string(forKey: versionKey)
+        if existing > 0, let stored, stored == peekVersion(at: url) {
+            return false
+        }
+        let snapshot = try decode(from: url)
+        if stored == snapshot.version && existing > 0 {
             return false
         }
         try replaceProblems(in: context, with: snapshot)
