@@ -22,6 +22,14 @@ struct SettingsView: View {
                 SegmentedControl(options: GradeScale.allCases, selection: $settings.gradeScale) { $0.label }
                 Caption(settings.gradeScale == .v ? "Grades like V5" : "Grades like 6C+")
 
+                SectionLabel(text: "Your height").padding(.top, 6)
+                CardButton(title: AppSettings.heightText(settings.climberHeight),
+                           subtitle: "\(AppSettings.centimetres(settings.climberHeight)) cm · climber in hold pictures",
+                           titleColor: Theme.blue) {
+                    router.push(.heightPicker)
+                }
+                .accessibilityIdentifier("climberHeight")
+
                 SectionLabel(text: "Stay open").padding(.top, 6)
                 CardButton(title: climbingTitle, subtitle: climbingSubtitle,
                            titleColor: climbing.isRunning ? Theme.green : Theme.blue) {

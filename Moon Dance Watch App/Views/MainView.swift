@@ -58,6 +58,7 @@ struct MainView: View {
         case .findBoard: FindBoardView()
         case .export: ExportView()
         case .problemPreview(let id): ProblemPreviewView(problemID: id)
+        case .heightPicker: HeightPickerView()
         case .logEditor(let id, let holdSet, let day): LogEditorView(problemID: id, holdSet: holdSet, day: day)
         }
     }
@@ -113,6 +114,7 @@ struct MainView: View {
         case "export": router.push(.export)
         case "preview":
             if let id = session.current?.problemId { router.push(.problemPreview(id)) }
+        case "height": router.push(.heightPicker)
         case "editor":
             if let problem = session.current {
                 router.push(.logEditor(problemID: problem.problemId, holdSet: problem.holdSet, day: .now))

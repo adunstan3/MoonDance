@@ -136,3 +136,30 @@ struct PreviewGeometryTests {
         #expect(zoomed.numberColumnX(band: 14).pinned)
     }
 }
+
+/// The climber beside the hold pictures, drawn to the board's scale.
+struct ClimberScaleTests {
+    @Test func sixFootClimberSpansAboutNineRows() {
+        let rect = PreviewGeometry.climberRect(heightInches: 72)
+        // 182.9 cm at 20 cm a hold.
+        #expect(abs(rect.height - 9.144) < 0.001)
+        // Feet level with the bottom of row 1.
+        #expect(abs(rect.maxY - (PreviewGeometry.gutterTop + Double(GridPosition.rows))) < 0.000_1)
+    }
+
+    @Test func everyHeightFitsItsStripRightOfColumnK() {
+        let columnK = PreviewGeometry.gutterLeft + Double(GridPosition.columns)
+        for inches in AppSettings.heightRange {
+            let rect = PreviewGeometry.climberRect(heightInches: inches)
+            #expect(rect.minX > columnK)
+            #expect(rect.maxX < PreviewGeometry.boardWidth)
+            #expect(rect.minY > PreviewGeometry.gutterTop)
+        }
+    }
+
+    @Test func heightText() {
+        #expect(AppSettings.heightText(72) == "6′0″")
+        #expect(AppSettings.heightText(69) == "5′9″")
+        #expect(AppSettings.centimetres(72) == 183)
+    }
+}

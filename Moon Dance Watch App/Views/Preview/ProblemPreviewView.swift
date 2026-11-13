@@ -12,6 +12,10 @@ import SwiftUI
 /// Long-press a hand hold to make it your high point (outlined in gold; one per
 /// problem, so it replaces the last). Long-pressing the finish logs a send; start
 /// holds can't be a high point.
+///
+/// A climber of your height (Settings › Your height, 6 ft by default) stands to
+/// the right of the board at the same scale, to help judge the distance between
+/// holds. Tapping the climber opens the height picker.
 struct ProblemPreviewView: View {
     let problemID: String
 
@@ -23,6 +27,7 @@ struct ProblemPreviewView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Environment(AppModel.self) private var model
+    @Environment(AppSettings.self) private var settings
     @Query private var highPoints: [HighPoint]
     @State private var problem: Problem?
     @State private var zoom = 1.0
@@ -61,7 +66,8 @@ struct ProblemPreviewView: View {
             Canvas { context, canvasSize in
                 guard let problem else { return }
                 let geometry = PreviewGeometry(size: canvasSize, zoom: zoom, centre: centre)
-                Self.draw(problem, highPoint: highPoint, geometry: geometry, in: &context)
+                Self.draw(problem, highPoint: highPoint, climberHeight: settings.climberHeight,
+                          geometry: geometry, in: &context)
             }
             .contentShape(Rectangle())
             .gesture(touches(size: size))
@@ -171,6 +177,12 @@ struct ProblemPreviewView: View {
                 let ended = touch
                 touch = nil
                 guard let ended, !ended.moved, !ended.longPressed else { return }
+                let geometry = PreviewGeometry(size: size, zoom: zoom, centre: centre)
+                if geometry.climberHitRect(heightInches: settings.climberHeight).contains(ended.start) {
+                    lastTap = nil
+                    router.push(.heightPicker)
+                    return
+                }
                 if let lastTap, Date.now.timeIntervalSince(lastTap) < Self.doubleTapInterval {
                     self.lastTap = nil
                     withAnimation(.snappy) {
@@ -210,17 +222,20 @@ struct ProblemPreviewView: View {
 
     // MARK: - Drawing
 
-    private static func draw(_ problem: Problem, highPoint: String?, geometry g: PreviewGeometry,
-                             in context: inout GraphicsContext) {
+    private static func draw(_ problem: Problem, highPoint: String?, climberHeight: Int,
+                             geometry g: PreviewGeometry, in context: inout GraphicsContext) {
         let images = HoldImages.shared
         let scale = g.scale
         let inProblem = Set(problem.holds.compactMap { GridPosition($0.position) })
 
-        // Faint dots where the other holds are, so the problem's place on the board reads.
+        // Faint dots where the other holds are, so the problem's place on the board
+        // reads. Only positions with a hold on this set (140 on the 2016 set).
+        let bolted = images.info(for: problem.holdSet).map { Set($0.positions) }
         let dot = max(1, scale * 0.06)
         for column in 0..<GridPosition.columns {
             for row in 1...GridPosition.rows {
-                guard let position = GridPosition(column: column, row: row), !inProblem.contains(position) else { continue }
+                guard let position = GridPosition(column: column, row: row), !inProblem.contains(position),
+                      bolted?.contains(position.name) ?? true else { continue }
                 let centre = g.screenPoint(column: column, row: row)
                 context.fill(Path(ellipseIn: CGRect(x: centre.x - dot, y: centre.y - dot, width: dot * 2, height: dot * 2)),
                              with: .color(Color(white: 0.22)))
@@ -261,7 +276,20 @@ struct ProblemPreviewView: View {
                            style: StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round))
         }
 
+        drawClimber(heightInches: climberHeight, g, in: &context)
         drawLabels(g, in: &context)
+    }
+
+    /// A standing figure your height, beside the board at the board's scale, with
+    /// the height floating above its head.
+    private static func drawClimber(heightInches: Int, _ g: PreviewGeometry, in context: inout GraphicsContext) {
+        let rect = g.climberScreenRect(heightInches: heightInches)
+        context.fill(PreviewGeometry.climberPath(in: rect), with: .color(Color(white: 0.42)))
+        let fontSize = min(max(g.scale * 0.5, 9), 15)
+        context.draw(Text(AppSettings.heightText(heightInches))
+                        .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Theme.white),
+                     at: CGPoint(x: rect.midX, y: rect.minY - fontSize * 0.9))
     }
 
     /// A–K across the top and 1–18 down the left. When zoomed in they stay pinned
@@ -304,7 +332,11 @@ nonisolated struct PreviewGeometry {
     static let gutterTop = 1.0
     /// Space on the right and bottom so outlines on column K and row 1 fit.
     static let margin = 0.25
-    static let boardWidth = Double(GridPosition.columns) + gutterLeft + margin
+    /// Room on the right for the climber drawn to scale (fits a 7′6″ climber).
+    static let climberStrip = 3.3
+    /// MoonBoard holes are about 20 cm apart, across and up: one board unit.
+    static let cellCentimetres = 20.0
+    static let boardWidth = Double(GridPosition.columns) + gutterLeft + margin + climberStrip
     static let boardHeight = Double(GridPosition.rows) + gutterTop + margin
     static let boardCentre = CGPoint(x: boardWidth / 2, y: boardHeight / 2)
     static let zoomRange: ClosedRange<Double> = 1...4
@@ -365,6 +397,58 @@ nonisolated struct PreviewGeometry {
             return nil
         }
         return nearest
+    }
+
+    /// The climber's box in board units: feet level with the bottom of row 1,
+    /// centred in the strip to the right of column K, as tall as you are.
+    static func climberRect(heightInches: Int) -> CGRect {
+        let height = Double(heightInches) * 2.54 / cellCentimetres
+        let width = height * climberWidthRatio
+        let feet = gutterTop + Double(GridPosition.rows)
+        let middle = gutterLeft + Double(GridPosition.columns) + margin + climberStrip / 2
+        return CGRect(x: middle - width / 2, y: feet - height, width: width, height: height)
+    }
+
+    /// Shoulder-to-shoulder, arms included, as a share of height.
+    static let climberWidthRatio = 0.27
+
+    func climberScreenRect(heightInches: Int) -> CGRect {
+        let board = Self.climberRect(heightInches: heightInches)
+        let origin = screenPoint(boardX: board.minX, boardY: board.minY)
+        return CGRect(x: origin.x, y: origin.y, width: board.width * scale, height: board.height * scale)
+    }
+
+    /// Where a tap opens the height picker: the climber, its label, and a little
+    /// slop so it's easy to hit at zoom 1.
+    func climberHitRect(heightInches: Int) -> CGRect {
+        let rect = climberScreenRect(heightInches: heightInches)
+        return CGRect(x: rect.minX - 8, y: rect.minY - 24, width: rect.width + 16, height: rect.height + 32)
+    }
+
+    /// A simple standing figure filling `rect`: head, torso, arms at the sides, legs.
+    static func climberPath(in rect: CGRect) -> Path {
+        let h = rect.height
+        let cx = rect.midX
+        func y(_ fraction: CGFloat) -> CGFloat { rect.minY + fraction * h }
+        var path = Path()
+        let head = 0.065 * h
+        path.addEllipse(in: CGRect(x: cx - head, y: y(0), width: head * 2, height: head * 2))
+        let torso = 0.085 * h
+        path.addRoundedRect(in: CGRect(x: cx - torso, y: y(0.14), width: torso * 2, height: 0.38 * h),
+                            cornerSize: CGSize(width: 0.04 * h, height: 0.04 * h))
+        let arm = 0.045 * h
+        for side in [-1.0, 1.0] {
+            let x = side < 0 ? cx - torso - 0.005 * h - arm : cx + torso + 0.005 * h
+            path.addRoundedRect(in: CGRect(x: x, y: y(0.15), width: arm, height: 0.35 * h),
+                                cornerSize: CGSize(width: arm / 2, height: arm / 2))
+        }
+        let leg = 0.075 * h
+        for side in [-1.0, 1.0] {
+            let x = side < 0 ? cx - 0.005 * h - leg : cx + 0.005 * h
+            path.addRoundedRect(in: CGRect(x: x, y: y(0.48), width: leg, height: 0.52 * h),
+                                cornerSize: CGSize(width: leg / 2, height: leg / 2))
+        }
+        return path
     }
 
     /// A closed, smooth curve through an outline's points: quadratic curves between
