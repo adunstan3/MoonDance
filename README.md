@@ -87,6 +87,10 @@ holds) and 2024 (sets D, E and F and the wooden holds).
   hold's blue ring. A problem has one high point: marking another hold moves it, and
   long-pressing it again clears it. Start holds can't be a high point, and
   long-pressing the **finish** hold logs the problem as **sent**.
+- **Climber for scale** — a figure your height stands to the right of column K at
+  the board's scale (holes are about 20 cm apart), with the height above its head,
+  so you can judge how far apart holds are. It zooms and pans with the board. Tap it
+  to change your height (6′0″ unless you set it).
 - **‹ Back** (top left, on the clock's line) — back to Session.
 
 <br clear="right">
@@ -120,10 +124,12 @@ Logging happens on the tries count in the side column:
 | --- | --- |
 | **Tap** the tries count | +1 attempt |
 | **Touch and hold** it | mark **Sent** (a send also counts as an attempt) |
-| **Touch and hold** a sent problem's **Sent** | unsend: clears that problem's log, back to 0 tries |
+| **Touch and hold** a sent problem's **Sent** | unsend: the latest send becomes an attempt; earlier tries and sends stay |
 
-Every log shows a short banner with **Undo** for 5 seconds. Undoing an unsend puts every
-attempt and send back with its original time. A problem can be sent more than once.
+Every log shows a short banner with **Undo** for 5 seconds. A problem can be sent more
+than once. To fix anything older, edit the log from **History** (below).
+
+If a save ever fails, a red banner says so and the error goes in the Bluetooth log.
 
 <br clear="right">
 
@@ -140,7 +146,8 @@ outlined in blue; tap any row to go to it.
 
 The **grade chip** opens the grade picker: turn the Crown from **V4** to **V14** and
 flip **Benchmarks only**. Changes apply straight away; the back arrow returns to the
-list. The **hold set chip** opens Settings.
+list. The **hold set chip** opens Settings, and the **dice** jumps to a random problem
+in the list.
 
 The Crown on Session steps through problems in exactly the list's order.
 
@@ -155,6 +162,12 @@ button needed). Each day shows how many problems you tried, your attempts and yo
 sends, then one row per problem with its tries or a green **Sent**. Tap a problem to
 open it on Session.
 
+Swipe a row left to fix the log:
+
+- **Edit** lists that problem's attempts and sends for the day. Tap one to switch it
+  between attempt and send, swipe it to delete it, or **Delete all**.
+- **Delete** removes that problem's log for the day, after asking.
+
 History, the problem list and stars all follow the hold set chosen in Settings.
 
 <br clear="right">
@@ -165,6 +178,12 @@ History, the problem list and stars all follow the hold set chosen in Settings.
 
 - **Hold set** — 2016 or 2024 · 40°, to match what's on the wall.
 - **Grades** — **V-Scale** (V5) or **Font** (6C+), used everywhere grades appear.
+- **Your height** — sizes the climber beside the hold pictures (Digital Crown picker,
+  4′0″ to 7′6″).
+- **Stay open** — **Start climbing session** runs an indoor-climbing workout session,
+  so raising your wrist shows Moondance instead of the clock. Health asks for
+  permission the first time; nothing is saved to Health. It ends when you tap
+  **End climbing session**, or after 3 hours.
 - **Board** — the saved LED box and its ID, **Forget board**, and the **Bluetooth log**.
 - **Your logs** — **Export logs**, with the date of the last export as a backup reminder.
 
@@ -188,13 +207,16 @@ and tap **Use this board**; it's saved, and later sessions connect to it automat
 <img src="docs/screenshots/export.png" width="240" align="right" alt="Export logs">
 
 Logs live only on the watch, so export them every few weeks. **Export logs** builds
-`moondance-log.csv` with every attempt and send on both hold sets and opens the watch
-share sheet, so you can send it by **Mail** or **Messages** over cellular.
+`moondance-log.csv`, a complete backup: every attempt, send, project star and high
+point on both hold sets, with the problem's id. It opens the watch share sheet, so you
+can send it by **Mail** or **Messages** over cellular.
 
 ```csv
-date,time,hold_set,problem,grade,type
-2026-11-08,18:30:00,2024,Dunes,V5 6C,attempt
-2026-11-08,18:42:10,2024,Dunes,V5 6C,send
+date,time,hold_set,problem_id,problem,grade,type,hold
+2026-11-08,18:30:00,2024,4f0c…,Dunes,V5 6C,attempt,
+2026-11-08,18:42:10,2024,4f0c…,Dunes,V5 6C,send,
+2026-11-08,18:45:00,2024,9a1e…,Calliope,V5 6C+,star,
+2026-11-08,18:50:12,2024,9a1e…,Calliope,V5 6C+,high_point,G13
 ```
 
 <br clear="right">
@@ -275,7 +297,11 @@ swift tools/build_hold_images.swift
   problem) — kept separately and keyed by the problem's id, so they survive a new
   snapshot.
 - **Settings** (UserDefaults) — hold set, grade scale, saved board, last grade picked,
-  Benchmarks only, last export date.
+  Benchmarks only, last export date, your height.
+
+If the store can't be opened, Moondance shows an error screen instead of crashing. You
+can carry on without saving, or start a new log. Starting a new log keeps the old files
+on the watch under a `.broken-…` name.
 
 ## Building and running
 
@@ -292,41 +318,55 @@ without the debugger:
 | `scripts/test.sh` | unit tests (a few seconds on a warm simulator) |
 | `scripts/uitest.sh` | UI tests, e.g. Digital Crown stepping (about a minute and a half) |
 | `scripts/shots.sh DIR name "args" …` | relaunch with launch arguments and screenshot each |
-| `scripts/release.sh` | archive and upload to App Store Connect (TestFlight) |
+| `scripts/release.sh` | bump the build number, test, archive, upload to TestFlight and tag |
 | `scripts/open.sh [--no-launch] [args…]` | build and open the app on your own simulator (the one in DeviceHub); `--no-launch` only installs it |
 | `scripts/locked.sh command…` | run any other build or simulator command under the shared lock |
 
 Every script waits for a lock shared with my other watch apps (`~/Library/Caches/watchapps-build.lock`, see [`scripts/lock.sh`](scripts/lock.sh)), so only one
 build or test runs on the Mac at a time. A script that prints "Waiting for the shared build lock" is queued, not stuck.
 
-Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export|preview`
+Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export|preview|editor|height`
 (with `-previewZoom 3 -previewCentre 7,9` for a zoomed preview),
 `-page history|settings`, `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent|unsend`
-`-demoLogs YES` and `-demoHighPoint YES`. `-uiTesting` starts with an empty in-memory store.
+`-demoLogs YES`, `-demoHighPoint YES`, `-demoStoreError YES` (the store error screen) and
+`-startClimbing YES`. `-uiTesting` starts with an empty in-memory store.
 
 ### Releasing through TestFlight
 
-1. Bump the build number (`CURRENT_PROJECT_VERSION`) on every target.
-2. Run `scripts/release.sh`. It archives a Release build for any watchOS device and
-   uploads it to App Store Connect as **TestFlight Internal Only**
+Commit everything, then run `scripts/release.sh`. The same script is used by all my
+watch apps; per-app values are in [`scripts/app.env`](scripts/app.env). It:
+
+1. refuses to run with uncommitted changes;
+2. bumps `CURRENT_PROJECT_VERSION` on every target past the newest `build-N` git tag
+   (each tag marks an uploaded build) and commits "Build N";
+3. runs the unit tests (and the UI tests with `UI_TESTS=1`);
+4. archives a Release build for any watchOS device, checks the archived build number
+   and `ITSAppUsesNonExemptEncryption`, and uploads it as **TestFlight Internal Only**
    ([`scripts/ExportOptions.plist`](scripts/ExportOptions.plist)), signing with the
-   Apple ID signed in to Xcode. Or in Xcode: **Any watchOS Device**, **Product ›
-   Archive**, then **Distribute App › TestFlight Internal Only** in the Organizer.
-3. The build appears under TestFlight in App Store Connect once it's processed.
+   Apple ID signed in to Xcode;
+5. tags the commit `build-N`. `PUSH=1` also pushes the branch and the tag; `BUILD=N`
+   picks the number.
+
+Logs go to `build/release-tests.log`, `build/archive.log` and `build/export.log`. The
+build appears under TestFlight in App Store Connect once it's processed.
 
 Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the paid team.
 
 ## Tests
 
-- **74 unit tests** (Swift Testing): the board protocol and LED numbering, the problem
-  snapshot and its loading, list ordering and pinning, logging, undo and unsend,
-  History's day grouping, CSV export, settings, Bluetooth failure messages, the hold
-  pictures and outlines (every problem hold has them), the preview's zoom and pan maths,
-  and high points (one per problem, start holds refused, the finish logs a send).
-- **6 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
+- **86 unit tests** (Swift Testing): the board protocol and LED numbering, which box a
+  job connects to and the timeout order, the problem snapshot and its loading (version
+  read from the file's first bytes), list ordering, pinning and random picks, logging,
+  undo, unsend and log editing, History's day grouping, CSV export, settings, Bluetooth
+  failure messages, the hold pictures and outlines (every problem hold has them), the
+  preview's zoom and pan maths, the climber's scale, and high points (one per problem,
+  start holds refused, the finish logs a send).
+- **8 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
   after swiping between pages and after the hold-picture preview (which the Crown
-  zooms), that a small nudge doesn't skip a problem, and long-pressing holds in the
-  preview (high point, start hold refused) plus double-tap to reset the zoom.
+  zooms), that a small nudge doesn't skip a problem, long-pressing holds in the
+  preview (high point, start hold refused) plus double-tap to reset the zoom, tapping
+  the climber to open the height picker, and starting a climbing session after the
+  Health prompt.
 
 ## Project layout
 
@@ -343,10 +383,10 @@ Moon Dance Watch App/
 Moon Dance Watch AppTests/     unit tests
 Moon Dance Watch AppUITests/   UI tests
 tools/         build_problems.py, build_hold_images.swift
-scripts/       run, test, UI test and screenshot helpers
+scripts/       run, test, UI test, screenshot, open and release scripts, the shared lock
 docs/          README images
 GYM-CHECKS.md  what to verify at the board
-SPEC.md        the original spec
+SPEC.md        the spec
 ```
 
 ## Known limits
@@ -359,6 +399,10 @@ SPEC.md        the original spec
 - **Action Button:** watchOS doesn't let an app read the Action Button or its long
   press, so logging is on screen only. The **Light It** shortcut can be assigned to the
   button (Watch › Settings › Action Button › Shortcut) or run with Siri.
+- **Climbing session:** it starts in the simulator, but whether raising your wrist
+  brings Moondance back (rather than the clock) can only be checked on the watch.
+- **Climber scale:** based on holes about 20 cm apart. That figure comes from
+  builders, not from Moon's published specs.
 - **Export:** watchOS doesn't tell the app whether the share sheet actually sent the
   file, so "Last export" is the last time the share sheet was opened.
 - The app's problem data and hold pictures are MoonBoard content shared by the

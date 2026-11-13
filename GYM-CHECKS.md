@@ -72,3 +72,17 @@ Button or use its long press, and the attempt/sent shortcuts were removed.)
 14. Walk out of range and tap Light it: after about 3 s it should say "Someone else
     has the board. Retry in a moment" (out of range and busy look the same: no
     advertising heard).
+
+## After the review fixes (build 3)
+
+15. Settings › Stay open › **Start climbing session**. Allow Health when asked
+    (turn on Workouts, then Done). The card should read "On since …". Lower your
+    wrist for a few minutes, then raise it: Moondance should be on screen, not
+    the clock. **End climbing session** stops it; a workout icon in the status bar
+    should disappear.
+16. Open a problem's hold pictures and check the climber beside the board looks
+    about right next to the real wall (holes are taken as 20 cm apart). Tap the
+    climber to set your height.
+17. Hold **Sent** on a sent problem: only the latest send should turn back into an
+    attempt. In History, swipe a row left › **Edit** and fix an entry.
+18. Export logs and check the CSV now has problem_id, star and high_point rows.
