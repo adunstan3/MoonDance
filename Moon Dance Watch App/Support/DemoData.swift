@@ -30,7 +30,7 @@ enum DemoData {
             context.insert(Project(problemId: problem.problemId, holdSet: problem.holdSet,
                                    dateAdded: now.addingTimeInterval(TimeInterval(-3600 * offset))))
         }
-        try? context.save()
+        Logbook.save(context)
     }
 }
 #endif

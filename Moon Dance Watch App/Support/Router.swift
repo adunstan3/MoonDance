@@ -11,6 +11,8 @@ enum Route: Hashable {
     case export
     /// Full-screen hold pictures for a problem (by problem id).
     case problemPreview(String)
+    /// Edit one problem's attempts and sends on one day (from History).
+    case logEditor(problemID: String, holdSet: String, day: Date)
 }
 
 /// The swipeable pages. Session is home; History and Settings are a swipe left.

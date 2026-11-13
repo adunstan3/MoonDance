@@ -58,11 +58,12 @@ struct MainView: View {
         case .findBoard: FindBoardView()
         case .export: ExportView()
         case .problemPreview(let id): ProblemPreviewView(problemID: id)
+        case .logEditor(let id, let holdSet, let day): LogEditorView(problemID: id, holdSet: holdSet, day: day)
         }
     }
 
     /// DEBUG launch arguments for screenshots:
-    /// `-openScreen list|grade|log|settings|find|export|preview`, `-page history|settings`,
+    /// `-openScreen list|grade|log|settings|find|export|preview|editor`, `-demoStoreError YES`, `-page history|settings`,
     /// `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent`, `-demoLogs YES`.
     private func applyDebugLaunchArguments() {
         #if DEBUG
@@ -109,6 +110,10 @@ struct MainView: View {
         case "export": router.push(.export)
         case "preview":
             if let id = session.current?.problemId { router.push(.problemPreview(id)) }
+        case "editor":
+            if let problem = session.current {
+                router.push(.logEditor(problemID: problem.problemId, holdSet: problem.holdSet, day: .now))
+            }
         default: break
         }
     }

@@ -2,13 +2,24 @@ import SwiftData
 import SwiftUI
 
 /// Sessions grouped by calendar day: problems tried, attempts and sends.
-/// Tapping a problem opens it in Session.
+/// Tapping a problem opens it in Session. Swiping a row edits or deletes that
+/// problem's log for the day.
 struct HistoryView: View {
     @Environment(\.modelContext) private var context
     @Environment(AppSettings.self) private var settings
     @Environment(SessionModel.self) private var session
     @Environment(Router.self) private var router
     @Query(sort: \LogEntry.date, order: .reverse) private var logs: [LogEntry]
+    @State private var pendingDelete: PendingDelete?
+
+    /// A History row whose day of logs is waiting for "Delete?" to be confirmed.
+    struct PendingDelete: Identifiable {
+        let problemId: String
+        let name: String
+        let day: Date
+        let count: Int
+        var id: String { "\(problemId)-\(day.timeIntervalSince1970)" }
+    }
 
     var body: some View {
         let holdSet = settings.holdSet.rawValue
@@ -33,6 +44,21 @@ struct HistoryView: View {
                             } label: {
                                 HistoryRow(problem: problem, day: entry)
                             }
+                            .swipeActions(edge: .trailing) {
+                                Button {
+                                    router.push(.logEditor(problemID: problem.problemId, holdSet: holdSet, day: day.date))
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(Theme.blue)
+                                Button {
+                                    pendingDelete = PendingDelete(problemId: problem.problemId, name: problem.name,
+                                                                  day: day.date, count: entry.attempts)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .tint(Theme.red)
+                            }
                         }
                     }
                 } header: {
@@ -47,6 +73,21 @@ struct HistoryView: View {
             }
         }
         .navigationTitle("History")
+        .confirmationDialog(deleteTitle, isPresented: Binding(get: { pendingDelete != nil },
+                                                              set: { if !$0 { pendingDelete = nil } }),
+                            titleVisibility: .visible, presenting: pendingDelete) { pending in
+            Button("Delete", role: .destructive) {
+                let entries = Logbook.entries(problemId: pending.problemId, holdSet: settings.holdSet.rawValue,
+                                              on: pending.day, in: context)
+                Logbook.delete(entries, in: context)
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    private var deleteTitle: String {
+        guard let pending = pendingDelete else { return "" }
+        return "Delete \(pending.count) log entr\(pending.count == 1 ? "y" : "ies") for \(pending.name) on \(History.title(for: pending.day))?"
     }
 }
 

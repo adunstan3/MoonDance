@@ -27,7 +27,7 @@ struct ExportView: View {
                 .padding(.vertical, 14)
                 .background(Theme.card, in: RoundedRectangle(cornerRadius: 18))
 
-                if let export, export.entryCount > 0 {
+                if let export, !export.isEmpty {
                     SectionLabel(text: "Send with")
                         .frame(maxWidth: .infinity, alignment: .leading)
                     ShareLink(item: export, preview: SharePreview(CSVExport.filename, image: Image(systemName: "doc.text"))) {
@@ -52,7 +52,11 @@ struct ExportView: View {
 
     private var summary: String {
         guard let export else { return "Preparing…" }
-        if export.entryCount == 0 { return "Nothing logged yet" }
-        return "\(export.entryCount) entr\(export.entryCount == 1 ? "y" : "ies") · both hold sets"
+        if export.isEmpty { return "Nothing logged yet" }
+        func plural(_ count: Int, _ one: String, _ many: String) -> String { "\(count) \(count == 1 ? one : many)" }
+        var parts = [plural(export.entryCount, "entry", "entries")]
+        if export.starCount > 0 { parts.append(plural(export.starCount, "star", "stars")) }
+        if export.highPointCount > 0 { parts.append(plural(export.highPointCount, "high point", "high points")) }
+        return parts.joined(separator: " · ") + " · both hold sets"
     }
 }

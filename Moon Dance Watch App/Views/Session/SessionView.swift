@@ -250,7 +250,7 @@ private struct SideColumn: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
-    /// Tap: +1 attempt. Hold: Sent, or, if already sent, Unsend (clears its log).
+    /// Tap: +1 attempt. Hold: Sent, or, if already sent, Unsend (the latest send becomes an attempt).
     private var attempts: some View {
         VStack(alignment: .leading, spacing: 0) {
             if stats.isSent {
@@ -282,7 +282,7 @@ private struct SideColumn: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(stats.isSent
-            ? "Tap for one more attempt. Touch and hold to unsend and reset tries."
+            ? "Tap for one more attempt. Touch and hold to undo the latest send."
             : "Tap for one more attempt. Touch and hold to mark sent.")
         .accessibilityAction(named: "Add attempt") { onAttempt() }
         .accessibilityAction(named: stats.isSent ? "Unsend" : "Mark sent") { stats.isSent ? onUnsend() : onSent() }

@@ -46,7 +46,7 @@ struct LoggingTests {
         #expect(stats.sends == 2)
     }
 
-    @Test func unsendResetsTriesAndUndoBringsThemBack() throws {
+    @Test func unsendTurnsOnlyTheLatestSendIntoAnAttempt() throws {
         model.logAttempt()
         model.logAttempt()
         model.markSent()
@@ -57,13 +57,45 @@ struct LoggingTests {
         #expect(stats == ProblemStats(attempts: 3, sends: 1))
 
         model.unsend()
-        #expect(stats == ProblemStats())
+        // The tries are kept; only the send is gone.
+        #expect(stats == ProblemStats(attempts: 3, sends: 0))
+        #expect(model.banner.current?.text == "Unsent · 3 tries")
         #expect(model.banner.current?.canUndo == true)
-        #expect(try model.context.fetchCount(FetchDescriptor<LogEntry>()) == 1)
+        #expect(try model.context.fetchCount(FetchDescriptor<LogEntry>()) == 4)
 
         model.undoBanner()
         #expect(stats == ProblemStats(attempts: 3, sends: 1))
         #expect(model.banner.current == nil)
+    }
+
+    @Test func unsendKeepsEarlierSends() throws {
+        model.markSent()
+        model.markSent()
+        model.unsend()
+        #expect(stats == ProblemStats(attempts: 2, sends: 1))
+        #expect(model.banner.current?.text == "Unsent 1 · 1 left")
+        // The latest send is the one undone.
+        let entries = try model.context.fetch(FetchDescriptor<LogEntry>(sortBy: [SortDescriptor(\.date)]))
+        #expect(entries.map(\.isSend) == [true, false])
+    }
+
+    @Test func logEditorEditsOneDay() throws {
+        let problem = current
+        let context = model.context
+        let today = Date.now
+        let yesterday = try #require(Calendar.current.date(byAdding: .day, value: -1, to: today))
+        Logbook.logAttempt(problem, in: context, at: yesterday)
+        let first = Logbook.logAttempt(problem, in: context, at: today.addingTimeInterval(-60))
+        Logbook.logAttempt(problem, in: context, at: today)
+        let onDay = Logbook.entries(problemId: problem.problemId, holdSet: problem.holdSet, on: today, in: context)
+        #expect(onDay.count == 2)
+
+        Logbook.setSend(true, entryID: first.id, in: context)
+        #expect(stats == ProblemStats(attempts: 3, sends: 1))
+
+        Logbook.delete(onDay, in: context)
+        // Yesterday's entry is untouched.
+        #expect(stats == ProblemStats(attempts: 1, sends: 0))
     }
 
     @Test func unsendWithNothingLoggedDoesNothing() {

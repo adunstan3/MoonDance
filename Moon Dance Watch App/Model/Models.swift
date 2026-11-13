@@ -95,4 +95,16 @@ enum Store {
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
         return try ModelContainer(for: schema, configurations: [configuration])
     }
+
+    /// Renames the store's files (default.store and its -shm and -wal files) so the
+    /// next launch starts an empty log. The old files stay next to it, renamed
+    /// "….broken-<time>", so the log can still be recovered from the watch.
+    static func moveAside(now: Date = .now) throws {
+        let path = ModelConfiguration(schema: Schema(models)).url.path
+        let stamp = Int(now.timeIntervalSince1970)
+        let files = FileManager.default
+        for suffix in ["", "-shm", "-wal"] where files.fileExists(atPath: path + suffix) {
+            try files.moveItem(atPath: path + suffix, toPath: path + ".broken-\(stamp)" + suffix)
+        }
+    }
 }

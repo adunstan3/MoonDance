@@ -16,10 +16,10 @@ final class BannerModel {
         let entryID: UUID?
         /// The problem it was logged on; moving to another problem hides it.
         var problemID: String?
-        /// Entries Undo puts back (after Unsend cleared them).
-        var restore: [Logbook.Snapshot] = []
+        /// The send Unsend turned into an attempt; Undo makes it a send again.
+        var unsentEntryID: UUID?
 
-        var canUndo: Bool { entryID != nil || !restore.isEmpty }
+        var canUndo: Bool { entryID != nil || unsentEntryID != nil }
     }
 
     /// How long Undo stays available (5 seconds in the app).
@@ -56,25 +56,47 @@ final class AppModel {
     let session = SessionModel()
     let banner = BannerModel()
     @ObservationIgnored let container: ModelContainer
+    /// Set when the saved log couldn't be opened. The app then runs on an empty
+    /// in-memory store (nothing is saved) and shows an error screen first.
+    let storeError: String?
 
     var context: ModelContext { container.mainContext }
 
-    init(settings: AppSettings, container: ModelContainer) {
+    init(settings: AppSettings, container: ModelContainer, storeError: String? = nil) {
         self.settings = settings
         self.container = container
+        self.storeError = storeError
         board = BoardManager(settings: settings)
         board.onJobEnded = { [weak self] status in self?.boardJobEnded(status) }
+        Logbook.onSaveError = { [weak self] error in self?.saveFailed(error) }
     }
 
     private convenience init() {
         let settings = AppSettings(defaults: RuntimeEnvironment.userDefaults)
+        var storeError: String?
         let container: ModelContainer
         do {
+            #if DEBUG
+            if RuntimeEnvironment.debugValue("demoStoreError") != nil {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            #endif
             container = try Store.makeContainer(inMemory: RuntimeEnvironment.isUITesting)
         } catch {
-            fatalError("Couldn't open the data store: \(error)")
+            storeError = error.localizedDescription
+            do {
+                container = try Store.makeContainer(inMemory: true)
+            } catch {
+                fatalError("Couldn't open even an in-memory store: \(error)")
+            }
         }
-        self.init(settings: settings, container: container)
+        self.init(settings: settings, container: container, storeError: storeError)
+    }
+
+    private func saveFailed(_ error: Error) {
+        board.log.error("Couldn't save the log: \(error.localizedDescription)")
+        banner.show(.init(kind: .error, text: "Couldn't save. Try again", entryID: nil))
+        WKInterfaceDevice.current().play(.failure)
     }
 
     /// The problem on the Session screen, loading the list if it isn't yet.
@@ -107,14 +129,17 @@ final class AppModel {
         WKInterfaceDevice.current().play(.success)
     }
 
-    /// Clears a sent problem's log for this hold set: unsent, back to 0 tries.
-    /// Undo (5 seconds) puts every entry back.
+    /// Turns the latest send back into an attempt; earlier tries and sends stay.
+    /// Undo (5 seconds) makes it a send again. History's log editor fixes anything else.
     func unsend() {
-        guard let problem = currentProblem else { return }
-        let removed = Logbook.clearLog(for: problem, in: context)
-        guard !removed.isEmpty else { return }
-        banner.show(.init(kind: .info, text: "Unsent · 0 tries", entryID: nil, problemID: problem.problemId,
-                          restore: removed))
+        guard let problem = currentProblem,
+              let changed = Logbook.unsendLatest(problem, in: context) else { return }
+        let stats = Logbook.stats(for: problem, in: context)
+        let text = stats.isSent
+            ? "Unsent 1 · \(stats.sends) left"
+            : "Unsent · \(stats.attempts) \(stats.attempts == 1 ? "try" : "tries")"
+        banner.show(.init(kind: .info, text: text, entryID: nil, problemID: problem.problemId,
+                          unsentEntryID: changed))
         WKInterfaceDevice.current().play(.directionDown)
     }
 
@@ -123,8 +148,8 @@ final class AppModel {
         if let entryID = current.entryID {
             Logbook.undo(entryID: entryID, in: context)
         }
-        if !current.restore.isEmpty {
-            Logbook.restore(current.restore, in: context)
+        if let unsent = current.unsentEntryID {
+            Logbook.setSend(true, entryID: unsent, in: context)
         }
         banner.dismiss()
         WKInterfaceDevice.current().play(.directionDown)

@@ -15,14 +15,19 @@ struct CSVExportTests {
 
     @Test func headerAndRowsOldestFirst() {
         let rows = [
-            CSVExport.Row(date: date(8, 19, 5), holdSet: "2024", problem: "Dunes", grade: "V5 6C", isSend: true),
-            CSVExport.Row(date: date(4, 18, 30), holdSet: "2016", problem: "Josh 1", grade: "V4 6B", isSend: false),
+            CSVExport.Row(date: date(8, 19, 5), holdSet: "2024", problemId: "d1", problem: "Dunes", grade: "V5 6C",
+                          kind: .send),
+            CSVExport.Row(date: date(4, 18, 30), holdSet: "2016", problemId: "j1", problem: "Josh 1", grade: "V4 6B",
+                          kind: .attempt),
+            CSVExport.Row(date: date(9, 20, 0), holdSet: "2024", problemId: "d1", problem: "Dunes", grade: "V5 6C",
+                          kind: .highPoint, hold: "G13"),
         ]
         let lines = CSVExport.csv(rows: rows, timeZone: newYork).split(separator: "\n").map(String.init)
         #expect(lines == [
-            "date,time,hold_set,problem,grade,type",
-            "2026-11-04,18:30:00,2016,Josh 1,V4 6B,attempt",
-            "2026-11-08,19:05:00,2024,Dunes,V5 6C,send",
+            "date,time,hold_set,problem_id,problem,grade,type,hold",
+            "2026-11-04,18:30:00,2016,j1,Josh 1,V4 6B,attempt,",
+            "2026-11-08,19:05:00,2024,d1,Dunes,V5 6C,send,",
+            "2026-11-09,20:00:00,2024,d1,Dunes,V5 6C,high_point,G13",
         ])
     }
 
@@ -33,7 +38,7 @@ struct CSVExportTests {
     }
 
     @Test func emptyLogIsJustTheHeader() {
-        #expect(CSVExport.csv(rows: []) == "date,time,hold_set,problem,grade,type\n")
+        #expect(CSVExport.csv(rows: []) == "date,time,hold_set,problem_id,problem,grade,type,hold\n")
     }
 }
 
@@ -47,15 +52,21 @@ struct LogExportTests {
         context.insert(LogEntry(problemId: "p1", holdSet: "2024", date: Date(timeIntervalSince1970: 100), isSend: false))
         context.insert(LogEntry(problemId: "p1", holdSet: "2024", date: Date(timeIntervalSince1970: 200), isSend: true))
         context.insert(LogEntry(problemId: "gone", holdSet: "2016", date: Date(timeIntervalSince1970: 300), isSend: false))
+        context.insert(Project(problemId: "p1", holdSet: "2024", dateAdded: Date(timeIntervalSince1970: 400)))
+        context.insert(HighPoint(problemId: "p1", holdSet: "2024", position: "G13", date: Date(timeIntervalSince1970: 500)))
         try context.save()
 
         let export = LogExport.make(context: context)
         #expect(export.entryCount == 3)
-        let lines = export.csv.split(separator: "\n")
-        #expect(lines.count == 4)
-        #expect(lines[1].hasSuffix(",2024,\"Crimp, Theory\",V5 6C+,attempt"))
-        #expect(lines[2].hasSuffix(",send"))
+        #expect(export.starCount == 1)
+        #expect(export.highPointCount == 1)
+        let lines = export.csv.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        #expect(lines.count == 7)
+        #expect(lines[1].hasSuffix(",2024,p1,\"Crimp, Theory\",V5 6C+,attempt,"))
+        #expect(lines[2].hasSuffix(",send,"))
         // A problem no longer in the snapshot is still exported, by id.
-        #expect(lines[3].hasSuffix(",2016,gone,,attempt"))
+        #expect(lines[3].hasSuffix(",2016,gone,,,attempt,"))
+        #expect(lines[4].hasSuffix(",2024,p1,\"Crimp, Theory\",V5 6C+,star,"))
+        #expect(lines[5].hasSuffix(",high_point,G13"))
     }
 }
