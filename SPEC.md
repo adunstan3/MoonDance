@@ -1,6 +1,6 @@
 # Moondance — Spec
 
-Nov 7, 2026 · @Andrew Dunstan
+Nov 7, 2026 · @Andrew Dunstan · updated Nov 13, 2026 to match the app as built
 
 ## Overview
 
@@ -8,7 +8,7 @@ Moondance is a standalone Apple Watch Ultra app that lights up MoonBoard problem
 
 - **Device:** Apple Watch Ultra (1st gen), watchOS 26.6, built with Claude Code and Xcode on the Mac.
 - **No phone or internet needed:** the watch talks to the board's LED box directly over Bluetooth, and all problems ship inside the app.
-- **v1 scope:** light up problems, switch hold sets, log attempts and sends, mark projects, export logs.
+- **v1 scope:** light up problems, switch hold sets, log attempts and sends, mark projects, export logs. Added since: hold pictures with a high point and a climber for scale, log editing, a random problem, and a climbing session that keeps the app on screen.
 - **Personal use only:** the bundled problems are MoonBoard's content, so the app is installed through the paid developer account and never published.
 
 ## Board and Bluetooth
@@ -41,28 +41,37 @@ The app ships a JSON snapshot of problems for both hold sets, loaded on first la
 
 ## Screens and navigation
 
-The app opens on a Session screen built for standing at the wall: the hold grid fills the screen, and the Digital Crown steps through problems without going back to a list. Projects and History are a swipe left.
+The app opens on a Session screen built for standing at the wall: the hold grid fills the left side, and the Digital Crown steps through problems without going back to a list. History and Settings are a swipe left.
 
-1. **Problem list:** a list for the current hold set and grade. The header shows the hold set and a grade button (opens on the last grade picked; V5 on first launch). Each row: name, grade, a B badge for benchmarks, a star for projects, a green check if sent, and the attempt count. Tapping a row opens it in Session.
-2. **Grade picker:** a Digital Crown picker from V0 to V14, plus Benchmarks only on or off.
-3. **Session (home): the hold grid in MoonBoard's colors (green start, blue hand, red finish) on the left; a side column with grade, B badge, attempt count, project star and list position ("3 / 42"); a full-width Light it button at the bottom. Turning the Crown moves to the next or previous problem in the list. Tapping the name opens the Problem lis**t.
-4. **Action Button: a press logs +1 attempt; a long press marks Sent. Each shows a short banner with Undo. Settings can switch it to Light it instead. After Light it, the button reads Lit with a green dot (gray idle, blue connecting, red failed), and Clear board appears**.
-5. **Projects:** starred problems for the current hold set, newest first, with attempts and sent status.
-6. **History:** sessions grouped by day: problems tried, attempts and sends. Tapping a problem opens it in Session.
-7. **Settings:** hold set, Action Button choice, saved board ID with **Forget board**, and **Export logs**.
+1. **Session (home):** the hold grid in MoonBoard's colors (green start, blue hand, red finish; dots only where the hold set has a hold) on the left. The problem name sits top left on the clock's line; tapping it opens the Problem list. The side column has the grade with a B badge, the tries count (tap: +1 attempt; touch and hold: Sent, or on a sent problem, Unsend), the project star, and Light it at the bottom. Turning the Crown moves to the next or previous problem in the list. Tapping the grid opens Hold pictures.
+2. **Hold pictures:** the problem drawn with pictures of the real holds, start and finish outlined, A–K and 1–18 around the edge. The Crown zooms, drag pans, and double-tap resets. Long-pressing a hand hold marks it as your high point (gold; one per problem); long-pressing the finish logs a send. A climber your height (Settings, 6 ft by default) stands to the right of the board at the board's scale (holes about 20 cm apart), with the height above its head; tapping it opens the height picker.
+3. **Problem list:** a list for the current hold set and grade. The header has a hold set chip (opens Settings), a grade chip (opens the grade picker) and a dice chip (jumps to a random problem in the list). Starred problems are pinned to the top, newest star first, then the rest by repeats. Each row: name, grade, a B badge for benchmarks, a star for projects, and a green check if sent or the attempt count. Tapping a row opens it in Session.
+4. **Grade picker:** a Digital Crown picker from V4 to V14 (the dataset starts at V4), plus Benchmarks only on or off. Opens on the last grade picked; V5 on first launch.
+5. **Light it:** after Light it, the button reads Lit with a green dot (blue while connecting, red with Retry if it failed, plus a red banner saying what to do), and Clear appears.
+6. **History:** sessions grouped by day: problems tried, attempts and sends. Tapping a problem opens it in Session. Swiping a row left offers Edit (that problem's entries that day: tap to switch attempt and send, swipe to delete, Delete all) and Delete (the problem's log for that day, after a confirmation).
+7. **Settings:** hold set, V or Font grades, your height, Stay open (start or end a climbing session), the saved board with Forget board, the Bluetooth log, and Export logs with the last export date.
 
-**Look:** near-black screens using only the board's LED colors: green for start and sent, blue for hand holds and actions, red for finish and destructive actions, white for projects. Every color is paired with an icon so it reads in glare, and the system clock stays visible.
+There is no separate Projects page: starred problems are pinned to the top of the list instead.
+
+**Action Button:** watchOS doesn't let a third-party app read the Action Button or its long press, so logging is on screen only. The Light It App Shortcut can be assigned to the button or run with Siri.
+
+**Look:** near-black screens using only the board's LED colors: green for start and sent, blue for hand holds and actions, red for finish and destructive actions, white for projects, gold for your high point. Every color is paired with an icon so it reads in glare, and the system clock stays visible.
 
 ## Logging, projects and export
 
 Everything is stored on the watch and works offline; export is the backup.
 
-- **Attempts:** each **+1 attempt** tap saves one attempt with the time. An **Undo** appears for 5 seconds after each tap.
-- **Sends:** **Sent** saves a send (which also counts as an attempt). A problem can be sent more than once; the list shows a check after the first.
+- **Attempts:** each tap on the tries count saves one attempt with the time. An **Undo** appears for 5 seconds after each tap.
+- **Sends:** touch and hold saves a send (which also counts as an attempt). A problem can be sent more than once; the list shows a check after the first.
+- **Unsend:** touch and hold on a sent problem turns its latest send back into an attempt. Earlier tries and sends stay, and Undo restores the send.
+- **Editing:** History's Edit and Delete fix anything older (for example, test logging during beta testing).
 - **Projects:** the star toggles a problem as a project. Sending a project keeps the star until it's removed by hand.
+- **High point:** one per problem, set from Hold pictures.
 - **Sessions:** History groups logs by calendar day, so no start or stop button is needed.
-- **Export:** Settings → **Export logs** builds a CSV (date, time, hold set, problem, grade, attempt or send) and opens the watch share sheet, so it can go out by Mail or Messages over cellular.
+- **Climbing session:** Settings › Stay open starts an indoor-climbing workout session (HealthKit) so raising the wrist shows the app instead of the clock. Nothing is saved to Health. It ends from Settings, or by itself after 3 hours.
+- **Export:** Settings → **Export logs** builds a CSV and opens the watch share sheet, so it can go out by Mail or Messages over cellular. Columns: date, time, hold set, problem id, problem, grade, type (attempt, send, star or high_point) and hold (the high point's position).
 - **Backup reminder:** Settings shows the date of the last export.
+- **Failures:** a failed save shows a red banner and goes in the Bluetooth log. If the store can't be opened, the app shows an error screen instead of crashing; it can carry on without saving or start a new log, keeping the old files on the watch.
 
 ## Data model
 
@@ -74,9 +83,10 @@ SwiftData on the watch, with the bundled problems kept read-only and the user's 
 | Hold | position (e.g. "D9"), role (start, hand, finish) | Stored inside Problem |
 | LogEntry | id, problemId, holdSet, date, isSend | One row per attempt or send |
 | Project | problemId, holdSet, dateAdded | One row per starred problem |
-| Settings | holdSet, boardID, lastExport | Stored in UserDefaults |
+| HighPoint | problemId, holdSet, position, date | One per problem and hold set |
+| Settings | holdSet, boardID, boardName, lastExport, lastGrade, benchmarksOnly, gradeScale, climberHeight | Stored in UserDefaults |
 
-Logs and projects refer to problems by MoonBoard's problem id, so they still match after the snapshot is replaced.
+Logs, projects and high points refer to problems by the dataset's problem id, so they still match after the snapshot is replaced.
 
 ## Build plan
 
@@ -92,10 +102,13 @@ One Claude Code prompt per milestone, each built in the simulator and committed 
 
 The repo gets SPEC.md (this doc, exported) and a CLAUDE.md saying to read the spec first and target the Ultra on watchOS 26.
 
+All seven milestones are built. Version 1.0 build 2 went to TestFlight on Nov 10, 2026, after the first gym visit. Since then: hold pictures and high points, then the Nov 13 review fixes (safer unsend, log editing, fuller export, no silent save failures, no crash on a bad store, faster launch and Crown stepping, random problem, climbing session, and the climber for scale). Releases go through `scripts/release.sh`, which bumps the build number, tests, uploads and tags `build-N`.
+
 ## Later versions and open questions
 
-Later: random problem by grade, setting your own problems, a Smart Stack widget for the current project, and a session timer.
+Later: setting your own problems, a Smart Stack widget for the current project, a session timer, and "unsent only" / "starred only" list filters.
 
-- [ ] Which LED box version does Rocky Top have?
-- [ ] Which community dataset includes the 2024 set?
-- [ ] Name and icon decided: Moondance, with the Crescent Problem icon (a moon with a green, blue and red problem inside its curve).
+- [x] Which LED box version does Rocky Top have? It works with the emulator's protocol (checked Nov 2026); Clear leaves A1 lit.
+- [x] Which community dataset includes the 2024 set? boardhang/boardsesh (see tools/build_problems.py).
+- [x] Name and icon decided: Moondance, with the Crescent Problem icon (a moon with a green, blue and red problem inside its curve).
+- [ ] Does a climbing session bring the app back on wrist raise on the real watch?
