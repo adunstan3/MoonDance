@@ -23,9 +23,6 @@ final class SessionModel {
 
     var current: Problem? { problems.indices.contains(index) ? problems[index] : nil }
 
-    /// "3 / 42"
-    var positionText: String { problems.isEmpty ? "0 / 0" : "\(index + 1) / \(problems.count)" }
-
     /// Reloads the list for the current settings, keeping the given (or current,
     /// or last-viewed) problem selected when it's still in the list.
     func reload(context: ModelContext, settings: AppSettings, keeping problemID: String? = nil) {

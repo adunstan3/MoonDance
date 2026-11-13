@@ -2,3 +2,6 @@
 xcuserdata/
 build/
 DerivedData/
+
+# Finder duplicates ("HoldImages-2024 2.png")
+* 2.*

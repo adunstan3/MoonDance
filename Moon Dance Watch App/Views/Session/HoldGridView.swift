@@ -1,19 +1,24 @@
 import SwiftUI
 
-/// The 11 × 18 board: a dot per position, a colored ring per hold
+/// The 11 × 18 board: a dot per bolted hold (every position on the 2024 set,
+/// 140 of the 198 on the 2016 set), a colored ring per problem hold
 /// (green start, blue hand, red finish). Row 18 is at the top. It fills whatever
 /// space it's given, so rows may be spaced a little further apart than columns.
 struct HoldGridView: View {
     let holds: [Hold]
+    /// "2016" or "2024": which positions have a hold on the wall.
+    var holdSet: String?
     /// Your high point ("G13"): a bigger gold dot inside its ring.
     var highPoint: String?
 
     var body: some View {
-        Canvas { context, size in
+        let bolted = holdSet.flatMap { HoldImages.shared.info(for: $0) }.map { Set($0.positions) }
+        return Canvas { context, size in
             let layout = GridLayout(size: size)
             let dot = layout.cell * 0.09
             for column in 0..<GridPosition.columns {
                 for row in 1...GridPosition.rows {
+                    if let bolted, let name = GridPosition(column: column, row: row)?.name, !bolted.contains(name) { continue }
                     let center = layout.center(column: column, row: row)
                     let rect = CGRect(x: center.x - dot, y: center.y - dot, width: dot * 2, height: dot * 2)
                     context.fill(Path(ellipseIn: rect), with: .color(Color(white: 0.32)))

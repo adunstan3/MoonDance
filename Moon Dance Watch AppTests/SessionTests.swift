@@ -64,7 +64,6 @@ struct SessionTests {
         settings.lastGrade = 5
         session.reload(context: container.mainContext, settings: settings)
         #expect(session.index == 0)
-        #expect(session.positionText == "1 / 3")
         session.step(by: 1, settings: settings)
         #expect(session.current?.problemId == "a")
         session.step(by: 5, settings: settings)
@@ -107,7 +106,6 @@ struct SessionTests {
         settings.lastGrade = 2
         session.reload(context: container.mainContext, settings: settings)
         #expect(session.current == nil)
-        #expect(session.positionText == "0 / 0")
         session.step(by: 1, settings: settings)
         #expect(session.index == 0)
     }

@@ -108,12 +108,6 @@ final class BoardManager: NSObject {
         start(.clear, message: BoardProtocol.clearMessage)
     }
 
-    /// Back to idle (for example after moving to another problem).
-    func resetStatus() {
-        guard job == nil else { return }
-        status = .idle
-    }
-
     #if DEBUG
     /// Screenshots and tests only: pretend a job ended this way.
     func debugSetStatus(_ status: Status, lastJob: JobKind = .light) {
@@ -354,17 +348,21 @@ final class BoardManager: NSObject {
         }
 
         guard searchingForJob, job != nil, peripheral == nil else { return }
-        let matches: Bool
-        if let saved = settings.boardID {
-            matches = found.identifier.uuidString == saved
-        } else {
-            matches = looksLikeBoard
-        }
-        if matches {
+        if Self.isJobTarget(found.identifier, looksLikeBoard: looksLikeBoard, savedBoardID: settings.boardID) {
             searchingForJob = false
             if !wantsDiscovery { endScan() }
             connect(found)
         }
+    }
+
+    /// Whether a device we just heard advertising is the one to connect to for a
+    /// job: the saved box only, or with none saved, the first LED box heard.
+    /// Hearing it advertise means nobody else is connected to it right now.
+    nonisolated static func isJobTarget(_ identifier: UUID, looksLikeBoard: Bool, savedBoardID: String?) -> Bool {
+        if let savedBoardID {
+            return identifier.uuidString == savedBoardID
+        }
+        return looksLikeBoard
     }
 
     static func describe(_ state: CBManagerState) -> String {

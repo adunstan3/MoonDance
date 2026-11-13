@@ -117,7 +117,7 @@ struct SessionView: View {
         // included, is in the column on the right. A two-line name pushes both down
         // and the column tightens up.
         return HStack(alignment: .top, spacing: 10) {
-            HoldGridView(holds: problem.holds, highPoint: highPoints.first {
+            HoldGridView(holds: problem.holds, holdSet: problem.holdSet, highPoint: highPoints.first {
                 $0.problemId == problem.problemId && $0.holdSet == problem.holdSet
             }?.position)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
