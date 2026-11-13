@@ -59,6 +59,22 @@ struct SessionTests {
         #expect(session.problems.map(\.problemId) == ["a", "c", "b"])
     }
 
+    @Test func randomNeverPicksTheCurrentProblem() {
+        let session = SessionModel()
+        settings.lastGrade = 5
+        session.reload(context: container.mainContext, settings: settings)
+        var generator = SplitMix(seed: 7)
+        var seen = Set<String>()
+        for _ in 0..<30 {
+            let before = session.current?.problemId
+            session.selectRandom(settings: settings, using: &generator)
+            #expect(session.current?.problemId != before)
+            seen.insert(session.current!.problemId)
+        }
+        // Every other problem comes up.
+        #expect(seen.count == session.problems.count)
+    }
+
     @Test func crownSteppingIsClamped() {
         let session = SessionModel()
         settings.lastGrade = 5
@@ -155,5 +171,18 @@ struct GridLayoutTests {
         #expect(layout.cellHeight == 12)
         #expect(layout.cell == 10)
         #expect(layout.center(column: 0, row: 1) == CGPoint(x: 5, y: 210))
+    }
+}
+
+/// A small seeded generator so random picks are repeatable in tests.
+struct SplitMix: RandomNumberGenerator {
+    var state: UInt64
+    init(seed: UInt64) { state = seed }
+    mutating func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        return z ^ (z >> 31)
     }
 }

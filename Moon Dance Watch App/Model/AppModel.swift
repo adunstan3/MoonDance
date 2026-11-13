@@ -55,6 +55,7 @@ final class AppModel {
     let router = Router()
     let session = SessionModel()
     let banner = BannerModel()
+    let climbing = ClimbingSession()
     @ObservationIgnored let container: ModelContainer
     /// Set when the saved log couldn't be opened. The app then runs on an empty
     /// in-memory store (nothing is saved) and shows an error screen first.

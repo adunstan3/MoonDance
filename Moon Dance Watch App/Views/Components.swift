@@ -73,9 +73,11 @@ struct Chip: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text(text)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+            if !text.isEmpty {
+                Text(text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
             if let systemImage {
                 Image(systemName: systemImage).font(.caption2.weight(.bold))
             }

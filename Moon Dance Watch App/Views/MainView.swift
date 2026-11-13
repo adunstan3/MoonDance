@@ -63,7 +63,7 @@ struct MainView: View {
     }
 
     /// DEBUG launch arguments for screenshots:
-    /// `-openScreen list|grade|log|settings|find|export|preview|editor`, `-demoStoreError YES`, `-page history|settings`,
+    /// `-openScreen list|grade|log|settings|find|export|preview|editor`, `-demoStoreError YES`, `-startClimbing YES`, `-page history|settings`,
     /// `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent`, `-demoLogs YES`.
     private func applyDebugLaunchArguments() {
         #if DEBUG
@@ -86,6 +86,9 @@ struct MainView: View {
         case "connecting":
             model.board.debugSetStatus(.connecting)
         default: break
+        }
+        if RuntimeEnvironment.debugValue("startClimbing") != nil {
+            Task { await model.climbing.start() }
         }
         switch RuntimeEnvironment.debugValue("demoBanner") {
         case "attempt": model.logAttempt()

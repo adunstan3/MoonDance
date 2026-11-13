@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// Hold set, Action Button choice, saved board with Forget board, Bluetooth log,
-/// and Export logs. A ScrollView rather than a List so each segment and card is
+/// Hold set, grades, Stay open (a climbing session), saved board with Forget
+/// board, Bluetooth log, and Export logs. A ScrollView rather than a List so each segment and card is
 /// its own tap target.
 struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(BoardManager.self) private var board
     @Environment(Router.self) private var router
+    @Environment(ClimbingSession.self) private var climbing
 
     @State private var confirmForget = false
 
@@ -20,6 +21,14 @@ struct SettingsView: View {
                 SectionLabel(text: "Grades").padding(.top, 6)
                 SegmentedControl(options: GradeScale.allCases, selection: $settings.gradeScale) { $0.label }
                 Caption(settings.gradeScale == .v ? "Grades like V5" : "Grades like 6C+")
+
+                SectionLabel(text: "Stay open").padding(.top, 6)
+                CardButton(title: climbingTitle, subtitle: climbingSubtitle,
+                           titleColor: climbing.isRunning ? Theme.green : Theme.blue) {
+                    climbing.toggle()
+                }
+                .accessibilityIdentifier("climbingSession")
+                Caption("Keeps Moondance on screen between climbs, for up to 3 hours. Nothing is saved to Health.")
 
                 SectionLabel(text: "Board").padding(.top, 6)
                 if settings.hasSavedBoard {
@@ -56,6 +65,23 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Moondance will scan for the LED box again next time.")
+        }
+    }
+
+    private var climbingTitle: String {
+        switch climbing.state {
+        case .off, .failed: "Start climbing session"
+        case .starting: "Starting…"
+        case .running: "End climbing session"
+        }
+    }
+
+    private var climbingSubtitle: String {
+        switch climbing.state {
+        case .off: "Off"
+        case .starting: "Asking Health for permission"
+        case .running(let since): "On since \(since.formatted(date: .omitted, time: .shortened))"
+        case .failed(let message): "Couldn't start: \(message)"
         }
     }
 

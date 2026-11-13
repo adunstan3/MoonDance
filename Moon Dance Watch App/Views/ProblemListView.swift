@@ -50,6 +50,12 @@ struct ProblemListView: View {
         .navigationTitle("Problems")
     }
 
+    /// Opens a random problem from this list in Session.
+    private func pickRandom() {
+        session.selectRandom(settings: settings)
+        router.pop()
+    }
+
     /// Hold set and grade chips. Each is its own tap target (one List row = one
     /// tap target on watchOS, so these use tap gestures, not buttons).
     private var header: some View {
@@ -69,6 +75,15 @@ struct ProblemListView: View {
                 .accessibilityLabel("Grade \(Grades.bucketName(settings.lastGrade, scale: settings.gradeScale)). Opens the grade picker")
                 .accessibilityAction { router.push(.gradePicker) }
             Spacer(minLength: 0)
+            if session.problems.count > 1 {
+                Chip(text: "", systemImage: "dice")
+                    .contentShape(Capsule())
+                    .onTapGesture(perform: pickRandom)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel("Random problem")
+                    .accessibilityIdentifier("randomProblem")
+                    .accessibilityAction { pickRandom() }
+            }
         }
     }
 }

@@ -72,6 +72,7 @@
       "build-settings": {
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME": "AccentColor",
+        "CODE_SIGN_ENTITLEMENTS": "Moon Dance Watch App.entitlements",
         "CODE_SIGN_STYLE": "Automatic",
         "CURRENT_PROJECT_VERSION": "2",
         "DEVELOPMENT_TEAM": "265N27R6W3",
@@ -79,7 +80,10 @@
         "GENERATE_INFOPLIST_FILE": "YES",
         "INFOPLIST_KEY_CFBundleDisplayName": "Moondance",
         "INFOPLIST_KEY_ITSAppUsesNonExemptEncryption": "NO",
+        "INFOPLIST_FILE": "Moon Dance Watch App-Info.plist",
         "INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription": "Moondance uses Bluetooth to light problems on the MoonBoard LED box.",
+        "INFOPLIST_KEY_NSHealthShareUsageDescription": "Moondance doesn't read your health data.",
+        "INFOPLIST_KEY_NSHealthUpdateUsageDescription": "Moondance runs a climbing workout session so it stays on screen between climbs. It doesn't save the workout.",
         "INFOPLIST_KEY_UISupportedInterfaceOrientations": "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown",
         "INFOPLIST_KEY_WKWatchOnly": "YES",
         "LD_RUNPATH_SEARCH_PATHS": [

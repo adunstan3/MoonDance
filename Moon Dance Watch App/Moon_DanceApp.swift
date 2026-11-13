@@ -14,6 +14,7 @@ struct MoondanceApp: App {
                 .environment(model.router)
                 .environment(model.session)
                 .environment(model.banner)
+                .environment(model.climbing)
                 .tint(Theme.blue)
         }
         .modelContainer(model.container)

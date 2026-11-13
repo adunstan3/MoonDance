@@ -43,6 +43,19 @@ final class SessionModel {
         remember(settings: settings)
     }
 
+    /// Jumps to a random problem in the list, never the one already showing.
+    func selectRandom(settings: AppSettings, using generator: inout some RandomNumberGenerator) {
+        guard problems.count > 1 else { return }
+        var pick = Int.random(in: 0..<(problems.count - 1), using: &generator)
+        if pick >= index { pick += 1 }
+        select(index: pick, settings: settings)
+    }
+
+    func selectRandom(settings: AppSettings) {
+        var generator = SystemRandomNumberGenerator()
+        selectRandom(settings: settings, using: &generator)
+    }
+
     func step(by offset: Int, settings: AppSettings) {
         select(index: index + offset, settings: settings)
     }
