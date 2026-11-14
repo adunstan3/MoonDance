@@ -343,6 +343,7 @@ without the debugger:
 | `scripts/shots.sh DIR name "args" …` | relaunch with launch arguments and screenshot each |
 | `scripts/release.sh` | bump the build number, test, archive, upload to TestFlight and tag |
 | `scripts/open.sh [--no-launch] [args…]` | build and open the app on your own simulator (the one in DeviceHub); `--no-launch` only installs it |
+| `scripts/pre-commit-secrets.sh` | git hook that blocks a staged Secrets.plist or Google API key; install once with `ln -sf ../../scripts/pre-commit-secrets.sh .git/hooks/pre-commit` |
 | `scripts/locked.sh command…` | run any other build or simulator command under the shared lock |
 
 Every script waits for a lock shared with my other watch apps (`~/Library/Caches/watchapps-build.lock`, see [`scripts/lock.sh`](scripts/lock.sh)), so only one
