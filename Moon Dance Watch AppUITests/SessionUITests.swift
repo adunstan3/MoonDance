@@ -184,4 +184,23 @@ final class SessionUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["problemPreview"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertFalse(callout.exists)
     }
+
+    /// History rows: the pen on the right opens the log editor; the rest of the
+    /// row opens the problem on Session.
+    @MainActor
+    func testHistoryPenOpensTheLogEditor() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-demoLogs", "YES", "-page", "history"]
+        app.launch()
+        let notNow = app.buttons["Not now"]
+        if notNow.waitForExistence(timeout: 20) { notNow.tap() }
+        let row = app.descendants(matching: .any)["historyRow"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertTrue(app.staticTexts["Edit log"].waitForExistence(timeout: 5))
+        app.buttons["BackButton"].firstMatch.tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5)).tap()
+        XCTAssertTrue(app.buttons["problemName"].waitForExistence(timeout: 5))
+    }
 }

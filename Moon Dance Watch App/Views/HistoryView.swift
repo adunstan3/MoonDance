@@ -2,8 +2,9 @@ import SwiftData
 import SwiftUI
 
 /// Sessions grouped by calendar day: problems tried, attempts and sends.
-/// Tapping a problem opens it in Session. Swiping a row edits or deletes that
-/// problem's log for the day.
+/// Tapping a problem opens it in Session; the pen on the right of a row edits
+/// that problem's log for the day (no swipe actions: History is one of the
+/// sideways pages, so a swipe changes page).
 struct HistoryView: View {
     @Environment(\.modelContext) private var context
     @Environment(AppSettings.self) private var settings
@@ -11,16 +12,6 @@ struct HistoryView: View {
     @Environment(Router.self) private var router
     @Query(sort: \LogEntry.date, order: .reverse) private var logs: [LogEntry]
     @Query private var marks: [HighPointMark]
-    @State private var pendingDelete: PendingDelete?
-
-    /// A History row whose day of logs is waiting for "Delete?" to be confirmed.
-    struct PendingDelete: Identifiable {
-        let problemId: String
-        let name: String
-        let day: Date
-        let count: Int
-        var id: String { "\(problemId)-\(day.timeIntervalSince1970)" }
-    }
 
     var body: some View {
         let holdSet = settings.holdSet.rawValue
@@ -41,28 +32,37 @@ struct HistoryView: View {
                 Section {
                     ForEach(day.problems) { entry in
                         if let problem = problems[entry.problemId] {
-                            Button {
+                            // Two tap areas in one row (a List row is one button on
+                            // watchOS, so these are tap gestures, not buttons).
+                            HStack(spacing: 6) {
+                                HistoryRow(problem: problem, day: entry)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        session.show(problemID: problem.problemId, context: context, settings: settings)
+                                        router.showSession()
+                                    }
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Theme.white)
+                                    .frame(width: 32, height: 32)
+                                    .background(Circle().fill(Color(white: 0.24)))
+                                    .contentShape(Circle())
+                                    .onTapGesture {
+                                        router.push(.logEditor(problemID: problem.problemId, holdSet: holdSet,
+                                                               day: day.date))
+                                    }
+                                    .accessibilityHidden(true)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityAction {
                                 session.show(problemID: problem.problemId, context: context, settings: settings)
                                 router.showSession()
-                            } label: {
-                                HistoryRow(problem: problem, day: entry)
                             }
-                            .swipeActions(edge: .trailing) {
-                                Button {
-                                    router.push(.logEditor(problemID: problem.problemId, holdSet: holdSet, day: day.date))
-                                } label: {
-                                    Label("Edit", systemImage: "pencil")
-                                }
-                                .tint(Theme.blue)
-                                Button {
-                                    pendingDelete = PendingDelete(problemId: problem.problemId, name: problem.name,
-                                                                  day: day.date,
-                                                                  count: entry.attempts + (entry.highPoint == nil ? 0 : 1))
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                .tint(Theme.red)
+                            .accessibilityAction(named: "Edit log") {
+                                router.push(.logEditor(problemID: problem.problemId, holdSet: holdSet, day: day.date))
                             }
+                            .accessibilityIdentifier("historyRow")
                         }
                     }
                 } header: {
@@ -77,23 +77,6 @@ struct HistoryView: View {
             }
         }
         .navigationTitle("History")
-        .confirmationDialog(deleteTitle, isPresented: Binding(get: { pendingDelete != nil },
-                                                              set: { if !$0 { pendingDelete = nil } }),
-                            titleVisibility: .visible, presenting: pendingDelete) { pending in
-            Button("Delete", role: .destructive) {
-                let holdSet = settings.holdSet.rawValue
-                Logbook.delete(Logbook.entries(problemId: pending.problemId, holdSet: holdSet, on: pending.day,
-                                               in: context), in: context)
-                Logbook.delete(Logbook.highPointMarks(problemId: pending.problemId, holdSet: holdSet, on: pending.day,
-                                                      in: context), in: context)
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-    }
-
-    private var deleteTitle: String {
-        guard let pending = pendingDelete else { return "" }
-        return "Delete \(pending.count) log entr\(pending.count == 1 ? "y" : "ies") for \(pending.name) on \(History.title(for: pending.day))?"
     }
 }
 

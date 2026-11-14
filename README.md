@@ -171,12 +171,11 @@ button needed). Each day shows how many problems you tried, your attempts and yo
 sends, then one row per problem with its tries or a green **Sent**, and a gold
 **High point** when you marked one that day. Tap a problem to open it on Session.
 
-Swipe a row left to fix the log:
-
-- **Edit** lists that problem's attempts, sends and high points for the day. Tap an
-  attempt or send to switch it, swipe anything to delete it, or **Delete all**.
-  Deleting a high point here only removes it from History; the current one stays.
-- **Delete** removes that problem's log for the day, after asking.
+The **pen** on the right of a row fixes that problem's log for the day: it lists the
+attempts, sends and high points. Tap an attempt or send to switch it, swipe anything
+left to delete it, or **Delete all** (after asking). Deleting a high point here only
+removes it from History; the current one stays. (Rows have no swipe actions, because
+a sideways swipe on History changes page.)
 
 History, the problem list and stars all follow the hold set chosen in Settings.
 
@@ -373,11 +372,12 @@ Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the p
   (every problem hold has them), the preview's zoom and pan maths, and high points
   (one per problem, every marking recorded, start holds refused, the finish logs a
   send).
-- **8 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
+- **9 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
   after swiping between pages and after the hold-picture preview (which the Crown
   zooms), that a small nudge doesn't skip a problem, long-pressing holds in the
   preview (high point, start hold refused) plus double-tap to reset the zoom, writing
-  beta on a hold (and an empty grid point showing nothing), and starting a climbing session after
+  beta on a hold (and an empty grid point showing nothing), History's pen opening the
+  log editor, and starting a climbing session after
   the Health prompt.
 
 ## Project layout
