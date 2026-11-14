@@ -80,9 +80,10 @@ Button or use its long press, and the attempt/sent shortcuts were removed.)
     wrist for a few minutes, then raise it: Moondance should be on screen, not
     the clock. **End climbing session** stops it; a workout icon in the status bar
     should disappear.
-16. Open a problem's hold pictures and check the climber beside the board looks
-    about right next to the real wall (holes are taken as 20 cm apart). Tap the
-    climber to set your height.
+16. In the hold pictures, tap holds to see their coordinates, and add beta with
+    ✎ Beta (try dictation and Scribble). Check it shows over the board and on
+    Session's Beta.
 17. Hold **Sent** on a sent problem: only the latest send should turn back into an
     attempt. In History, swipe a row left › **Edit** and fix an entry.
-18. Export logs and check the CSV now has problem_id, star and high_point rows.
+18. Export logs and check the CSV now has problem_id, star, high_point and beta
+    rows. Mark a high point and check it shows in History.

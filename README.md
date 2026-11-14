@@ -59,7 +59,10 @@ The hold grid fills the left side in the board's LED colors: **green** start hol
   Long names wrap onto a second line and then end in "…".
 - **Grade** with a white **B** badge for benchmarks.
 - **Tries** — how many attempts you've logged on this problem (see below).
-- **Star** — tap to make it a project. Starred problems are pinned to the top of the list.
+- **Proj** — tap the star to make it a project. Projects are pinned to the top of the list.
+- **✎ Beta** — your notes on how to climb it. With none yet, it opens straight into
+  the editor (keyboard, Scribble or dictation). With notes, it shows them, with **Edit**.
+  Saving blank text removes them. The pen turns white once a problem has beta.
 - **Light it** — sends the problem to the board.
 - **Tap the grid** for a full-screen look at the real holds (below).
 
@@ -87,10 +90,10 @@ holds) and 2024 (sets D, E and F and the wooden holds).
   hold's blue ring. A problem has one high point: marking another hold moves it, and
   long-pressing it again clears it. Start holds can't be a high point, and
   long-pressing the **finish** hold logs the problem as **sent**.
-- **Climber for scale** — a figure your height stands to the right of column K at
-  the board's scale (holes are about 20 cm apart), with the height above its head,
-  so you can judge how far apart holds are. It zooms and pans with the board. Tap it
-  to change your height (6′0″ unless you set it).
+- **Tap a hold** — its coordinates (such as **E9**) flash in a pill above it. This
+  works on any bolt, not just the problem's holds.
+- **✎ Beta** (on the clock's line, next to Back) — shows your notes over the bottom of
+  the board, with **Edit** and **×**. With no notes yet, it opens the editor.
 - **‹ Back** (top left, on the clock's line) — back to Session.
 
 <br clear="right">
@@ -159,13 +162,14 @@ The Crown on Session steps through problems in exactly the list's order.
 
 Your sessions, grouped by calendar day in the watch's time zone (no start or stop
 button needed). Each day shows how many problems you tried, your attempts and your
-sends, then one row per problem with its tries or a green **Sent**. Tap a problem to
-open it on Session.
+sends, then one row per problem with its tries or a green **Sent**, and a gold
+**High point** when you marked one that day. Tap a problem to open it on Session.
 
 Swipe a row left to fix the log:
 
-- **Edit** lists that problem's attempts and sends for the day. Tap one to switch it
-  between attempt and send, swipe it to delete it, or **Delete all**.
+- **Edit** lists that problem's attempts, sends and high points for the day. Tap an
+  attempt or send to switch it, swipe anything to delete it, or **Delete all**.
+  Deleting a high point here only removes it from History; the current one stays.
 - **Delete** removes that problem's log for the day, after asking.
 
 History, the problem list and stars all follow the hold set chosen in Settings.
@@ -178,8 +182,6 @@ History, the problem list and stars all follow the hold set chosen in Settings.
 
 - **Hold set** — 2016 or 2024 · 40°, to match what's on the wall.
 - **Grades** — **V-Scale** (V5) or **Font** (6C+), used everywhere grades appear.
-- **Your height** — sizes the climber beside the hold pictures (Digital Crown picker,
-  4′0″ to 7′6″).
 - **Stay open** — **Start climbing session** runs an indoor-climbing workout session,
   so raising your wrist shows Moondance instead of the clock. Health asks for
   permission the first time; nothing is saved to Health. It ends when you tap
@@ -207,16 +209,17 @@ and tap **Use this board**; it's saved, and later sessions connect to it automat
 <img src="docs/screenshots/export.png" width="240" align="right" alt="Export logs">
 
 Logs live only on the watch, so export them every few weeks. **Export logs** builds
-`moondance-log.csv`, a complete backup: every attempt, send, project star and high
-point on both hold sets, with the problem's id. It opens the watch share sheet, so you
+`moondance-log.csv`, a complete backup: every attempt, send, project star, high point
+marked and beta note on both hold sets, with the problem's id. It opens the watch share sheet, so you
 can send it by **Mail** or **Messages** over cellular.
 
 ```csv
-date,time,hold_set,problem_id,problem,grade,type,hold
-2026-11-08,18:30:00,2024,4f0c…,Dunes,V5 6C,attempt,
-2026-11-08,18:42:10,2024,4f0c…,Dunes,V5 6C,send,
-2026-11-08,18:45:00,2024,9a1e…,Calliope,V5 6C+,star,
-2026-11-08,18:50:12,2024,9a1e…,Calliope,V5 6C+,high_point,G13
+date,time,hold_set,problem_id,problem,grade,type,hold,note
+2026-11-08,18:30:00,2024,4f0c…,Dunes,V5 6C,attempt,,
+2026-11-08,18:42:10,2024,4f0c…,Dunes,V5 6C,send,,
+2026-11-08,18:45:00,2024,9a1e…,Calliope,V5 6C+,star,,
+2026-11-08,18:50:12,2024,9a1e…,Calliope,V5 6C+,high_point,G13,
+2026-11-08,19:02:40,2024,9a1e…,Calliope,V5 6C+,beta,,"Heel hook the start, then bump"
 ```
 
 <br clear="right">
@@ -293,11 +296,12 @@ swift tools/build_hold_images.swift
 - **Problems** (SwiftData, read-only) — loaded from `Problems.json` on first launch and
   replaced only when a new snapshot ships.
 - **Logs** (`LogEntry`: problem, hold set, time, attempt or send), **projects**
-  (`Project`: starred problems) and **high points** (`HighPoint`: one hold per
-  problem) — kept separately and keyed by the problem's id, so they survive a new
-  snapshot.
+  (`Project`: starred problems), **high points** (`HighPoint`: the current hold per
+  problem, and `HighPointMark`: every marking, for History) and **beta**
+  (`BetaNote`: your notes per problem) — kept separately and keyed by the problem's
+  id, so they survive a new snapshot.
 - **Settings** (UserDefaults) — hold set, grade scale, saved board, last grade picked,
-  Benchmarks only, last export date, your height.
+  Benchmarks only, last export date.
 
 If the store can't be opened, Moondance shows an error screen instead of crashing. You
 can carry on without saving, or start a new log. Starting a new log keeps the old files
@@ -325,11 +329,12 @@ without the debugger:
 Every script waits for a lock shared with my other watch apps (`~/Library/Caches/watchapps-build.lock`, see [`scripts/lock.sh`](scripts/lock.sh)), so only one
 build or test runs on the Mac at a time. A script that prints "Waiting for the shared build lock" is queued, not stuck.
 
-Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export|preview|editor|height`
+Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export|preview|editor|beta`
+(with `-previewFlash G13` and `-previewBeta YES` in the preview)
 (with `-previewZoom 3 -previewCentre 7,9` for a zoomed preview),
 `-page history|settings`, `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent|unsend`
 `-demoLogs YES`, `-demoHighPoint YES`, `-demoStoreError YES` (the store error screen) and
-`-startClimbing YES`. `-uiTesting` starts with an empty in-memory store.
+`-startClimbing YES`, `-demoBeta "text"`. `-uiTesting` starts with an empty in-memory store.
 
 ### Releasing through TestFlight
 
@@ -354,19 +359,20 @@ Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the p
 
 ## Tests
 
-- **86 unit tests** (Swift Testing): the board protocol and LED numbering, which box a
+- **87 unit tests** (Swift Testing): the board protocol and LED numbering, which box a
   job connects to and the timeout order, the problem snapshot and its loading (version
   read from the file's first bytes), list ordering, pinning and random picks, logging,
-  undo, unsend and log editing, History's day grouping, CSV export, settings, Bluetooth
-  failure messages, the hold pictures and outlines (every problem hold has them), the
-  preview's zoom and pan maths, the climber's scale, and high points (one per problem,
-  start holds refused, the finish logs a send).
+  undo, unsend and log editing, History's day grouping (with high points), CSV export,
+  beta notes, settings, Bluetooth failure messages, the hold pictures and outlines
+  (every problem hold has them), the preview's zoom and pan maths, and high points
+  (one per problem, every marking recorded, start holds refused, the finish logs a
+  send).
 - **8 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
   after swiping between pages and after the hold-picture preview (which the Crown
   zooms), that a small nudge doesn't skip a problem, long-pressing holds in the
-  preview (high point, start hold refused) plus double-tap to reset the zoom, tapping
-  the climber to open the height picker, and starting a climbing session after the
-  Health prompt.
+  preview (high point, start hold refused) plus double-tap to reset the zoom, Beta
+  opening the editor when there are no notes, and starting a climbing session after
+  the Health prompt.
 
 ## Project layout
 
@@ -401,8 +407,6 @@ SPEC.md        the spec
   button (Watch › Settings › Action Button › Shortcut) or run with Siri.
 - **Climbing session:** it starts in the simulator, but whether raising your wrist
   brings Moondance back (rather than the clock) can only be checked on the watch.
-- **Climber scale:** based on holes about 20 cm apart. That figure comes from
-  builders, not from Moon's published specs.
 - **Export:** watchOS doesn't tell the app whether the share sheet actually sent the
   file, so "Last export" is the last time the share sheet was opened.
 - The app's problem data and hold pictures are MoonBoard content shared by the
