@@ -37,6 +37,28 @@ struct CSVExportTests {
         #expect(CSVExport.escape("The \"Moon\"") == "\"The \"\"Moon\"\"\"")
     }
 
+    /// Free text that starts like a spreadsheet formula is kept as text.
+    @Test func freeTextThatLooksLikeAFormulaIsDefused() {
+        #expect(CSVExport.escapeText("=HYPERLINK(\"x\")") == "\"'=HYPERLINK(\"\"x\"\")\"")
+        #expect(CSVExport.escapeText("+1 move") == "\"'+1 move\"")
+        #expect(CSVExport.escapeText("-skip the crimp") == "\"'-skip the crimp\"")
+        #expect(CSVExport.escapeText("@sum") == "\"'@sum\"")
+        #expect(CSVExport.escapeText("\tTab") == "\"'\tTab\"")
+        #expect(CSVExport.escapeText("\r\nline") == "\"'\r\nline\"")
+        // Ordinary text is unchanged, and a formula character later on is fine.
+        #expect(CSVExport.escapeText("Heel hook") == "Heel hook")
+        #expect(CSVExport.escapeText("Crimp, then =") == "\"Crimp, then =\"")
+        #expect(CSVExport.escapeText("") == "")
+    }
+
+    /// Only the problem and note columns are defused; fixed-format columns never change.
+    @Test func onlyProblemAndNoteColumnsAreDefused() {
+        let rows = [CSVExport.Row(date: date(8, 19, 5), holdSet: "2024", problemId: "-id", problem: "=Dunes",
+                                  grade: "V5 6C", kind: .beta, hold: "E9", note: "-match")]
+        let lines = CSVExport.csv(rows: rows, timeZone: newYork).split(separator: "\n").map(String.init)
+        #expect(lines[1] == "2026-11-08,19:05:00,2024,-id,\"'=Dunes\",V5 6C,beta,E9,\"'-match\"")
+    }
+
     @Test func emptyLogIsJustTheHeader() {
         #expect(CSVExport.csv(rows: []) == "date,time,hold_set,problem_id,problem,grade,type,hold,note\n")
     }

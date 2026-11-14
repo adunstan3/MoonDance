@@ -230,6 +230,13 @@ date,time,hold_set,problem_id,problem,grade,type,hold,note
 2026-11-08,19:02:40,2024,9a1e…,Calliope,V5 6C+,beta,E9,"Heel hook, then bump"
 ```
 
+Fields with a comma, quote or line break are quoted. A **problem** or **note** that starts
+with `=`, `+`, `-`, `@`, a tab or a carriage return gets an apostrophe in front and is
+quoted (`"'-skip the crimp"`), so a spreadsheet shows it as text rather than running it
+as a formula. Strip that leading apostrophe if you ever read these columns back in. No
+problem in the current snapshot is affected; it's there for beta notes and future
+snapshots. The other columns are never changed.
+
 <br clear="right">
 
 ### Bluetooth log

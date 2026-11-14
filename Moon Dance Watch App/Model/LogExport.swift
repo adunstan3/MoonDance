@@ -39,16 +39,15 @@ nonisolated enum CSVExport {
         timeFormatter.dateFormat = "HH:mm:ss"
 
         let lines = rows.sorted { $0.date < $1.date }.map { row in
-            [dateFormatter.string(from: row.date),
-             timeFormatter.string(from: row.date),
-             row.holdSet,
-             row.problemId,
-             row.problem,
-             row.grade,
-             row.kind.rawValue,
-             row.hold,
-             row.note]
-                .map(escape)
+            [escape(dateFormatter.string(from: row.date)),
+             escape(timeFormatter.string(from: row.date)),
+             escape(row.holdSet),
+             escape(row.problemId),
+             escapeText(row.problem),
+             escape(row.grade),
+             escape(row.kind.rawValue),
+             escape(row.hold),
+             escapeText(row.note)]
                 .joined(separator: ",")
         }
         return ([header] + lines).joined(separator: "\n") + "\n"
@@ -57,7 +56,24 @@ nonisolated enum CSVExport {
     /// Quotes a field that holds a comma, quote or line break.
     static func escape(_ field: String) -> String {
         guard field.contains(where: { $0 == "," || $0 == "\"" || $0 == "\n" || $0 == "\r" }) else { return field }
-        return "\"" + field.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+        return quoted(field)
+    }
+
+    /// Characters that make a spreadsheet treat a cell as a formula.
+    static let formulaStarts: Set<Character> = ["=", "+", "-", "@", "\t", "\r"]
+
+    /// For free text (problem names from the dataset, beta notes): a field that
+    /// starts like a formula gets an apostrophe in front and is quoted, so a
+    /// spreadsheet shows it as text instead of running it. Otherwise as `escape`.
+    static func escapeText(_ field: String) -> String {
+        guard let first = field.unicodeScalars.first, formulaStarts.contains(Character(first)) else {
+            return escape(field)
+        }
+        return quoted("'" + field)
+    }
+
+    private static func quoted(_ field: String) -> String {
+        "\"" + field.replacingOccurrences(of: "\"", with: "\"\"") + "\""
     }
 }
 

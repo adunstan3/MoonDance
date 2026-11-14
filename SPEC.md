@@ -70,7 +70,7 @@ Everything is stored on the watch and works offline; export is the backup.
 - **Beta:** short notes pinned to holds ("heel hook", "match"), written in Hold pictures.
 - **Sessions:** History groups logs by calendar day, so no start or stop button is needed.
 - **Climbing session:** Settings › Stay open starts an indoor-climbing workout session (HealthKit) so raising the wrist shows the app instead of the clock. Nothing is saved to Health. It ends from Settings, or by itself after 3 hours.
-- **Export:** Settings → **Export logs** builds a CSV and opens the watch share sheet, so it can go out by Mail or Messages over cellular. Columns: date, time, hold set, problem id, problem, grade, type (attempt, send, star, high_point or beta), hold (the high point's position) and note (the beta text).
+- **Export:** Settings → **Export logs** builds a CSV and opens the watch share sheet, so it can go out by Mail or Messages over cellular. Columns: date, time, hold set, problem id, problem, grade, type (attempt, send, star, high_point or beta), hold (the high point's position) and note (the beta text). A problem name or note starting with =, +, -, @, a tab or a carriage return gets a leading apostrophe and quotes, so a spreadsheet can't run it as a formula.
 - **Backup reminder:** Settings shows the date of the last export.
 - **Failures:** a failed save shows a red banner and goes in the Bluetooth log. If the store can't be opened, the app shows an error screen instead of crashing; it can carry on without saving or start a new log, keeping the old files on the watch.
 
