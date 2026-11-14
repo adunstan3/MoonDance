@@ -159,10 +159,29 @@ final class SessionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["E9"].exists)
         app.buttons["editHoldBeta"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["holdBetaField"].firstMatch.waitForExistence(timeout: 5))
+        // The card's whole area opens the keyboard, even near its top edge.
+        let card = app.descendants(matching: .any)["holdBetaCard"].firstMatch
+        card.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.12)).tap()
+        XCTAssertTrue(app.buttons["Emoji"].waitForExistence(timeout: 5), "the keyboard should open")
+        // The keyboard's own Cancel, not the editor's.
+        app.buttons.matching(NSPredicate(format: "label == 'Cancel' AND identifier != 'cancelHoldBeta'"))
+            .firstMatch.tap()
         // New beta: Cancel, not Remove, and no Save (edits save as you go).
-        XCTAssertTrue(app.buttons["cancelHoldBeta"].exists)
+        XCTAssertTrue(app.buttons["cancelHoldBeta"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["removeHoldBeta"].exists)
-        app.buttons["cancelHoldBeta"].tap()
+
+        // Type a long note: it saves without a Save button and shows wrapped.
+        card.tap()
+        XCTAssertTrue(app.buttons["Emoji"].waitForExistence(timeout: 5))
+        app.typeText("Heel hook then rock over to the crimp")
+        app.buttons["Done"].tap()
+        let wrapped = app.staticTexts["Heel hook then rock over to the crimp"]
+        XCTAssertTrue(wrapped.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(wrapped.frame.height, 30, "long beta should wrap onto more than one line")
+
+        // Back goes straight to the board, with no callout open.
+        app.buttons["BackButton"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["problemPreview"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(callout.exists)
     }
 }

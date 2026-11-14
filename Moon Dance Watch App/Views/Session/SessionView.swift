@@ -166,7 +166,8 @@ private struct SessionProblemView: View {
                        compact: compact,
                        hasBeta: !betaNotes.isEmpty,
                        onAttempt: model.logAttempt, onSent: model.markSent, onUnsend: model.unsend,
-                       onStar: model.toggleProject)
+                       onStar: model.toggleProject,
+                       onBeta: { router.push(.problemBeta(problem.problemId)) })
                 .frame(width: SideColumn.width)
         }
         .padding(.top, 8)
@@ -240,12 +241,14 @@ private struct SideColumn: View {
     let onSent: () -> Void
     let onUnsend: () -> Void
     let onStar: () -> Void
-    /// Whether any of the problem's holds has beta (shown, not a button).
+    /// Whether any of the problem's holds has beta; if so, "Beta" shows and opens
+    /// the hold pictures with Show beta on.
     let hasBeta: Bool
+    let onBeta: () -> Void
 
     init(problem: Problem, stats: ProblemStats, isProject: Bool, scale: GradeScale, compact: Bool, hasBeta: Bool,
          onAttempt: @escaping () -> Void, onSent: @escaping () -> Void, onUnsend: @escaping () -> Void,
-         onStar: @escaping () -> Void) {
+         onStar: @escaping () -> Void, onBeta: @escaping () -> Void) {
         self.problem = problem
         self.stats = stats
         self.isProject = isProject
@@ -256,6 +259,7 @@ private struct SideColumn: View {
         self.onSent = onSent
         self.onUnsend = onUnsend
         self.onStar = onStar
+        self.onBeta = onBeta
     }
 
     var body: some View {
@@ -275,20 +279,10 @@ private struct SideColumn: View {
                 .accessibilityLabel(isProject ? "Project. Tap to unmark" : "Mark as a project")
                 .accessibilityIdentifier("projectToggle")
             if hasBeta {
-                // Just an indicator: beta is read and written on the hold pictures.
-                HStack(spacing: 5) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 19, weight: .semibold))
-                        .frame(width: 22)
-                    Text("Beta")
-                        .font(.footnote.weight(.semibold))
-                        .lineLimit(1)
-                }
-                .foregroundStyle(Theme.white)
-                .frame(minHeight: compact ? 24 : 28)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Has beta")
-                .accessibilityIdentifier("betaIndicator")
+                // Only when there's beta: opens the hold pictures with Show beta on.
+                toggleRow(icon: "pencil", text: "Beta", on: true, action: onBeta)
+                    .accessibilityLabel("Beta. Shows it on the hold pictures")
+                    .accessibilityIdentifier("betaIndicator")
             }
             Spacer(minLength: 0)
             LightControls(problem: problem)

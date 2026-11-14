@@ -61,7 +61,8 @@ The hold grid fills the left side in the board's LED colors: **green** start hol
 - **Tries** — how many attempts you've logged on this problem (see below).
 - **Proj** — tap the star to make it a project. Projects are pinned to the top of the list.
 - **✎ Beta** — shows when the problem has beta (written on the holds in the hold
-  pictures, below); those holds get a small white dot on the grid.
+  pictures, below); tap it to open the hold pictures with **Show beta** on. Those
+  holds get a small white dot on the grid.
 - **Light it** — sends the problem to the board.
 - **Tap the grid** for a full-screen look at the real holds (below).
 
@@ -91,14 +92,14 @@ holds) and 2024 (sets D, E and F and the wooden holds).
   long-pressing the **finish** hold logs the problem as **sent**.
 - **Tap a hold** — a callout opens beside it with its coordinates (such as **E9**),
   your **beta** for that hold (or "No beta yet") and a small **pen** to write or change
-  it (keyboard, Scribble or dictation). Edits save as you type; the back button
-  returns here. The red button is **Cancel** the first time and **Remove** after that.
+  it (keyboard, Scribble or dictation). Long beta wraps onto several lines. Edits
+  save as you type; the back button returns to the board with no hold selected. The red button is **Cancel** the first time and **Remove** after that.
   Tap the hold again or anywhere else to close the callout. Holds with beta carry a
   small white mark.
 - **Show beta** (on the clock's line, next to Back; gray when there's none) — every
   note in a bubble to the left or right of the board, level with its hold and joined
   to it by a line. Bubbles never overlap and their lines don't cross; pan sideways to
-  read them. **Hide beta** puts them away.
+  read them. Zoomed in, they stay below the column letters. **Hide beta** puts them away.
 - **‹ Back** (top left, on the clock's line) — back to Session.
 
 <br clear="right">

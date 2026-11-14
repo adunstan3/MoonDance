@@ -9,7 +9,8 @@ import CoreGraphics
 /// to the other side. Within a lane, bubbles keep their holds' top-to-bottom
 /// order and are pushed apart so they never overlap, which also keeps the lines
 /// from crossing. Bubbles have a fixed size in points (readable at any zoom); the
-/// lanes sit just outside the board, so you pan sideways to read them.
+/// lanes sit just outside the board, so you pan sideways to read them. They stay
+/// between the column letters and the bottom of the screen.
 nonisolated enum BetaBubbles {
     /// Text width inside a bubble, in points.
     static let textWidth: CGFloat = 76
@@ -39,8 +40,10 @@ nonisolated enum BetaBubbles {
     static func layout(_ notes: [Note], geometry g: PreviewGeometry) -> [Bubble] {
         let leftEdge = g.screenPoint(boardX: 0, boardY: 0).x - laneGap
         let rightEdge = g.screenPoint(boardX: PreviewGeometry.boardWidth, boardY: 0).x + laneGap
-        let top = g.screenPoint(boardX: 0, boardY: PreviewGeometry.gutterTop).y
-        let bottom = g.screenPoint(boardX: 0, boardY: PreviewGeometry.boardHeight).y
+        // Level with the board, but only the part on screen below the column letters,
+        // so zoomed in the bubbles never slide up into the header.
+        let top = max(g.screenPoint(boardX: 0, boardY: PreviewGeometry.gutterTop).y, g.contentTop + spacing)
+        let bottom = min(g.screenPoint(boardX: 0, boardY: PreviewGeometry.boardHeight).y, g.size.height - spacing)
         let laneHeight = bottom - top
 
         func height(_ lane: [Note]) -> CGFloat {

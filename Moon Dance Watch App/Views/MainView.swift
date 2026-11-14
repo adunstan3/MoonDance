@@ -58,6 +58,7 @@ struct MainView: View {
         case .findBoard: FindBoardView()
         case .export: ExportView()
         case .problemPreview(let id): ProblemPreviewView(problemID: id)
+        case .problemBeta(let id): ProblemPreviewView(problemID: id, showingBeta: true)
         case .holdBeta(let id, let holdSet, let position):
             HoldBetaEditor(problemID: id, holdSet: holdSet, position: position)
         case .logEditor(let id, let holdSet, let day): LogEditorView(problemID: id, holdSet: holdSet, day: day)

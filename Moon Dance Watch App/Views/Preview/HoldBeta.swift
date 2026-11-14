@@ -62,11 +62,31 @@ struct HoldBetaEditor: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                TextField("Heel hook, match, cross…", text: $draft, axis: .vertical)
-                    .lineLimit(2...6)
-                    .autocorrectionDisabled()
-                    .accessibilityIdentifier("holdBetaField")
-                    .onChange(of: draft) { save() }
+                // The watch's text field shows a single truncated line, so the text
+                // is shown wrapped in a card, with the real field (plain, clear text)
+                // on top:
+                // tapping anywhere on the card opens the keyboard with the text.
+                Text(draft.isEmpty ? "Heel hook, match, cross…" : draft)
+                    .font(.body)
+                    .foregroundStyle(draft.isEmpty ? Theme.secondaryText : Theme.white)
+                    .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 14))
+                    .overlay {
+                        TextField("", text: $draft)
+                            .textFieldStyle(.plain)
+                            .foregroundStyle(.clear)
+                            .tint(.clear)
+                            .autocorrectionDisabled()
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .accessibilityIdentifier("holdBetaField")
+                            .onChange(of: draft) { save() }
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("holdBetaCard")
                 Button(role: .destructive) {
                     draft = ""
                     save()

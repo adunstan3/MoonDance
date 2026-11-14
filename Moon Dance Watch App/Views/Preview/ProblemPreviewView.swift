@@ -20,9 +20,12 @@ import SwiftUI
 /// a line to its hold; pan sideways to read them.
 struct ProblemPreviewView: View {
     let problemID: String
+    /// Open with Show beta on (the Beta mark on Session).
+    let showingBeta: Bool
 
-    init(problemID: String) {
+    init(problemID: String, showingBeta: Bool = false) {
         self.problemID = problemID
+        self.showingBeta = showingBeta
         _betaNotes = Query(filter: #Predicate<BetaNote> { $0.problemId == problemID })
     }
 
@@ -133,6 +136,7 @@ struct ProblemPreviewView: View {
         .onAppear {
             problem = SessionModel.problem(id: problemID, context: context)
             crownFocused = true
+            if showingBeta && !beta.isEmpty { showAllBeta = true }
             // Screenshots: -previewSelect E9 opens a hold's callout; -previewBeta YES shows every note.
             if let name = RuntimeEnvironment.debugValue("previewSelect"), let position = GridPosition(name) {
                 selected = position
@@ -157,6 +161,8 @@ struct ProblemPreviewView: View {
         let left = min(max(hold.x - Self.calloutWidth / 2, 4), size.width - Self.calloutWidth - 4)
         return HoldCallout(name: position.name, text: text) {
             guard let problem else { return }
+            // Back from the editor returns to the board with no hold selected.
+            selected = nil
             router.push(.holdBeta(problemID: problem.problemId, holdSet: problem.holdSet, position: position.name))
         }
         .frame(width: Self.calloutWidth)
@@ -408,6 +414,9 @@ struct ProblemPreviewView: View {
             context.stroke(dot, with: .color(Theme.background), lineWidth: 1)
         }
         guard showAll else { return }
+        // Bubbles and lines stay below the column letters, clear of Back and the clock.
+        var context = context
+        context.clip(to: Path(CGRect(x: 0, y: g.contentTop, width: g.size.width, height: g.size.height)))
 
         var labels: [String: GraphicsContext.ResolvedText] = [:]
         var notes: [BetaBubbles.Note] = []
@@ -448,9 +457,9 @@ struct ProblemPreviewView: View {
     /// A–K across the top and 1–18 down the left. When zoomed in they stay pinned
     /// to the edges, on a dark strip, so you always know where you are.
     private static func drawLabels(_ g: PreviewGeometry, in context: inout GraphicsContext) {
-        let fontSize = min(max(g.scale * 0.5, 9), 15)
+        let fontSize = g.labelFontSize
         let font = Font.system(size: fontSize, weight: .semibold, design: .rounded)
-        let band = fontSize * 1.5
+        let band = g.labelBand
 
         let letterY = g.letterRowY(band: band)
         if letterY.pinned {
@@ -579,6 +588,16 @@ nonisolated struct PreviewGeometry {
                                over: (Self.overscroll + sideRoom) / scale),
                        y: axis(point.y, board: Self.boardHeight, half: viewport.height / (2 * scale),
                                over: Self.overscroll / scale))
+    }
+
+    /// Size of the A–K and 1–18 labels, and the band they sit in.
+    var labelFontSize: CGFloat { min(max(scale * 0.5, 9), 15) }
+    var labelBand: CGFloat { labelFontSize * 1.5 }
+
+    /// The bottom of the column letters (wherever they are): nothing that moves
+    /// with the board is drawn above it except the board itself.
+    var contentTop: CGFloat {
+        letterRowY(band: labelBand).y + labelBand / 2
     }
 
     /// Where the column letters go: in their gutter, or pinned under the clock line
