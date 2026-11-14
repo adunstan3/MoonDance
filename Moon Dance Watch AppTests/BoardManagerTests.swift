@@ -9,14 +9,30 @@ struct BoardManagerTests {
     let other = UUID()
 
     @Test func savedBoardOnlyMatchesItself() {
-        #expect(BoardManager.isJobTarget(saved, looksLikeBoard: true, savedBoardID: saved.uuidString))
+        #expect(BoardManager.isJobTarget(saved, savedBoardID: saved.uuidString))
         // Another LED box in the gym is never used once one is saved.
-        #expect(!BoardManager.isJobTarget(other, looksLikeBoard: true, savedBoardID: saved.uuidString))
+        #expect(!BoardManager.isJobTarget(other, savedBoardID: saved.uuidString))
     }
 
-    @Test func withoutASavedBoardTheFirstLEDBoxMatches() {
-        #expect(BoardManager.isJobTarget(other, looksLikeBoard: true, savedBoardID: nil))
-        #expect(!BoardManager.isJobTarget(other, looksLikeBoard: false, savedBoardID: nil))
+    /// Lots of unrelated devices offer the Nordic UART service, so with no saved
+    /// board nothing is a target, however board-like it looks.
+    @Test func withoutASavedBoardNothingMatches() {
+        #expect(!BoardManager.isJobTarget(other, savedBoardID: nil))
+        #expect(!BoardManager.isJobTarget(saved, savedBoardID: nil))
+    }
+
+    @MainActor @Test func aJobWithoutASavedBoardFailsAtOnce() {
+        let defaults = UserDefaults(suiteName: "BoardManagerTests.noBoard")!
+        defaults.removePersistentDomain(forName: "BoardManagerTests.noBoard")
+        let board = BoardManager(settings: AppSettings(defaults: defaults))
+        var ended: BoardManager.Status?
+        board.onJobEnded = { ended = $0 }
+        board.light([Hold(position: "A5", role: .start)])
+        #expect(!board.isBusy)
+        #expect(board.status == .failed(.noSavedBoard))
+        #expect(ended == .failed(.noSavedBoard))
+        #expect(!board.isScanning)
+        #expect(BoardFailure.noSavedBoard.message.contains("Find board"))
     }
 
     /// Listening must give up before a connection attempt would, and both well
@@ -31,7 +47,9 @@ struct BoardManagerTests {
     @MainActor @Test func aSecondJobIsIgnoredWhileBusy() {
         let defaults = UserDefaults(suiteName: "BoardManagerTests")!
         defaults.removePersistentDomain(forName: "BoardManagerTests")
-        let board = BoardManager(settings: AppSettings(defaults: defaults))
+        let settings = AppSettings(defaults: defaults)
+        settings.boardID = UUID().uuidString
+        let board = BoardManager(settings: settings)
         board.light([Hold(position: "A5", role: .start)])
         #expect(board.isBusy)
         board.clearBoard()

@@ -1,6 +1,6 @@
 # Moondance — Spec
 
-Nov 7, 2026 · @Andrew Dunstan · updated Nov 13, 2026 to match the app as built
+Nov 7, 2026 · @Andrew Dunstan · updated Nov 14, 2026 to match the app as built
 
 ## Overview
 
@@ -17,7 +17,7 @@ Rocky Top has one 40° MoonBoard with one LED box, and the gym swaps it between 
 
 - **Grid:** 11 columns (A–K) × 18 rows, 198 positions, the same for both hold sets. Only the problem list changes between them.
 - **Hold set setting:** Settings has a 2016 / 2024 40° choice. The problem list, logs and projects all follow it.
-- **Connection:** Core Bluetooth in the central role. The first scan finds the LED box, shows its ID, and saves it; later sessions connect to that box automatically.
+- **Connection:** Core Bluetooth in the central role. The first scan finds the LED box, shows its ID, and saves it; later sessions connect to that box automatically. The app only ever connects to the saved box: with none saved, Light it opens Find board, and any other job (the Bluetooth log's Test send or Clear) fails with "Pick your board first". Many unrelated devices offer the same UART service, so a board-like device is never picked automatically.
 - **Sending a problem:** connect, write the hold list in the box's format, then disconnect right away so other climbers' phones can reach the board.
 - **Protocol source:** the community Raspberry Pi emulator of the LED box ([e-sr/moonboard](https://github.com/e-sr/moonboard)). Claude Code reads its code for the exact message format rather than guessing.
 - **Box version risk:** newer V3/V4 boxes show a 12-digit ID and may differ from the older box the emulator copies. The first milestone tests this at the gym.
@@ -105,7 +105,7 @@ One Claude Code prompt per milestone, each built in the simulator and committed 
 
 The repo gets SPEC.md (this doc, exported) and a CLAUDE.md saying to read the spec first and target the Ultra on watchOS 26.
 
-All seven milestones are built. Version 1.0 build 2 went to TestFlight on Nov 10, 2026, after the first gym visit. Since then: hold pictures and high points, then the Nov 13 review fixes (safer unsend, log editing, fuller export, no silent save failures, no crash on a bad store, faster launch and Crown stepping, random problem, climbing session). Nov 14: beta pinned to holds, high points in History, "Proj" label (a climber-for-scale figure and a separate beta window were tried and removed). Releases go through `scripts/release.sh`, which bumps the build number, tests, uploads and tags `build-N`.
+All seven milestones are built. Version 1.0 build 2 went to TestFlight on Nov 10, 2026, after the first gym visit. Since then: hold pictures and high points, then the Nov 13 review fixes (safer unsend, log editing, fuller export, no silent save failures, no crash on a bad store, faster launch and Crown stepping, random problem, climbing session). Nov 14: beta pinned to holds, high points in History, "Proj" label (a climber-for-scale figure and a separate beta window were tried and removed); build 3 uploaded. Later on Nov 14, security fixes: jobs only connect to the saved board, formula-safe CSV text, a more private Bluetooth log, and a pre-commit secret check. Releases go through `scripts/release.sh`, which bumps the build number, tests, uploads and tags `build-N`.
 
 ## Later versions and open questions
 

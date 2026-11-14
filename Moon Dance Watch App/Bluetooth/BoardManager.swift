@@ -163,6 +163,12 @@ final class BoardManager: NSObject {
         lastJob = kind
         status = .connecting
         log.add("\(kind.rawValue): message \(message)")
+        // Never guess which device is the board: plenty of unrelated devices offer
+        // the same UART service, and we'd be writing to a stranger's.
+        guard settings.hasSavedBoard else {
+            fail(.noSavedBoard)
+            return
+        }
         if !settings.bleFlags.isEmpty {
             log.add("Flags packet first: ~\(settings.bleFlags)*")
         }
@@ -181,11 +187,7 @@ final class BoardManager: NSObject {
     /// Listens for the box's advertising, then connects (see the type comment).
     private func connectForJob() {
         guard let jobID = job?.id, peripheral == nil, central != nil, !searchingForJob else { return }
-        if settings.boardID != nil {
-            log.add("Listening for the saved board")
-        } else {
-            log.add("No saved board; listening for the first LED box")
-        }
+        log.add("Listening for the saved board")
         searchingForJob = true
         beginScan()
         Task { [weak self] in
@@ -348,7 +350,7 @@ final class BoardManager: NSObject {
         }
 
         guard searchingForJob, job != nil, peripheral == nil else { return }
-        if Self.isJobTarget(found.identifier, looksLikeBoard: looksLikeBoard, savedBoardID: settings.boardID) {
+        if Self.isJobTarget(found.identifier, savedBoardID: settings.boardID) {
             searchingForJob = false
             if !wantsDiscovery { endScan() }
             connect(found)

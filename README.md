@@ -203,7 +203,10 @@ History, the problem list and stars all follow the hold set chosen in Settings.
 The first time you open the app (or tap Light it with no board saved), **Find board**
 scans for MoonBoard LED boxes and lists them with their ID and signal strength. Pick one
 and tap **Use this board**; it's saved, and later sessions connect to it automatically.
-**Not now** skips it.
+**Not now** skips it. Moondance only ever connects to the saved box, never to a device
+that merely looks like one (plenty of unrelated gadgets offer the same Bluetooth
+service), so with no board saved, Test send and Clear in the Bluetooth log say
+"Pick your board first".
 
 *(The screenshot comes from the simulator, which has no Bluetooth — hence the red note.)*
 

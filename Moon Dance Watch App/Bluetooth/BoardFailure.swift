@@ -6,6 +6,8 @@ nonisolated enum BoardFailure: Equatable, Sendable {
     case bluetoothUnavailable
     case bluetoothNotAllowed
     case bluetoothOff
+    /// No board saved: pick one in Find board first.
+    case noSavedBoard
     case timedOut(seconds: Int64)
     /// The box wasn't advertising: someone else is connected, or it's out of range.
     case notAdvertising(seconds: Int64)
@@ -24,6 +26,7 @@ nonisolated enum BoardFailure: Equatable, Sendable {
         case .bluetoothUnavailable: "Bluetooth isn't supported here (the simulator has no Bluetooth)"
         case .bluetoothNotAllowed: "Bluetooth permission is off: Settings › Privacy › Bluetooth › Moondance"
         case .bluetoothOff: "Bluetooth is turned off"
+        case .noSavedBoard: "No board saved, so not connecting to anything; pick one in Settings › Find board"
         case .timedOut(let seconds): "Timed out: the board didn't answer within \(seconds) s"
         case .notAdvertising(let seconds):
             "Didn't hear the board advertising within \(seconds) s: someone else is probably connected, "
@@ -46,6 +49,7 @@ nonisolated enum BoardFailure: Equatable, Sendable {
         case .bluetoothUnavailable: "Bluetooth isn't available"
         case .bluetoothNotAllowed: "Allow Bluetooth for Moondance in Settings"
         case .bluetoothOff: "Turn Bluetooth on, then retry"
+        case .noSavedBoard: "Pick your board first: Settings › Find board"
         case .timedOut: "Board didn't answer. Move closer and retry"
         case .notAdvertising, .connectTimedOut: "Someone else has the board. Retry in a moment"
         case .connectFailed, .disconnected: "Board busy or out of range. Retry"

@@ -88,3 +88,11 @@ Button or use its long press, and the attempt/sent shortcuts were removed.)
     attempt. In History, swipe a row left › **Edit** and fix an entry.
 18. Export logs and check the CSV now has problem_id, star, high_point and beta
     rows. Mark a high point and check it shows in History.
+
+## After the security fixes (build 4)
+
+19. Settings › **Forget board**, then Bluetooth log › **Test send**: it should fail at
+    once with "Pick your board first: Settings › Find board" and connect to nothing.
+    Then **Find board**, pick "Moonboard A", and check Light it still works as before.20. Bluetooth log › turn on **Show all devices** and **Scan**: the box's line should
+    still show its ID, services and maker data; other devices only "Found other
+    device "name" rssi -NN".
