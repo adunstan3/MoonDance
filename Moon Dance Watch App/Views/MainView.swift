@@ -58,13 +58,13 @@ struct MainView: View {
         case .findBoard: FindBoardView()
         case .export: ExportView()
         case .problemPreview(let id): ProblemPreviewView(problemID: id)
-        case .heightPicker: HeightPickerView()
+        case .beta(let id, let holdSet): BetaView(problemID: id, holdSet: holdSet)
         case .logEditor(let id, let holdSet, let day): LogEditorView(problemID: id, holdSet: holdSet, day: day)
         }
     }
 
     /// DEBUG launch arguments for screenshots:
-    /// `-openScreen list|grade|log|settings|find|export|preview|editor`, `-demoStoreError YES`, `-startClimbing YES`, `-page history|settings`,
+    /// `-openScreen list|grade|log|settings|find|export|preview|editor|beta`, `-demoStoreError YES`, `-startClimbing YES`, `-demoBeta "text"`, `-page history|settings`,
     /// `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent`, `-demoLogs YES`.
     private func applyDebugLaunchArguments() {
         #if DEBUG
@@ -87,6 +87,9 @@ struct MainView: View {
         case "connecting":
             model.board.debugSetStatus(.connecting)
         default: break
+        }
+        if let text = RuntimeEnvironment.debugValue("demoBeta"), let problem = session.current {
+            Logbook.setBeta(text, problemId: problem.problemId, holdSet: problem.holdSet, in: context)
         }
         if RuntimeEnvironment.debugValue("startClimbing") != nil {
             Task { await model.climbing.start() }
@@ -114,7 +117,8 @@ struct MainView: View {
         case "export": router.push(.export)
         case "preview":
             if let id = session.current?.problemId { router.push(.problemPreview(id)) }
-        case "height": router.push(.heightPicker)
+        case "beta":
+            if let problem = session.current { router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet)) }
         case "editor":
             if let problem = session.current {
                 router.push(.logEditor(problemID: problem.problemId, holdSet: problem.holdSet, day: .now))

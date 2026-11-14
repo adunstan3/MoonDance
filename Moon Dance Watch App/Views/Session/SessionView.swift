@@ -134,6 +134,7 @@ private struct SessionProblemView: View {
     @Query private var logs: [LogEntry]
     @Query private var projects: [Project]
     @Query private var highPoints: [HighPoint]
+    @Query private var betaNotes: [BetaNote]
 
     init(problem: Problem, compact: Bool) {
         self.problem = problem
@@ -143,6 +144,7 @@ private struct SessionProblemView: View {
         _logs = Query(filter: #Predicate<LogEntry> { $0.problemId == id && $0.holdSet == set })
         _projects = Query(filter: #Predicate<Project> { $0.problemId == id && $0.holdSet == set })
         _highPoints = Query(filter: #Predicate<HighPoint> { $0.problemId == id && $0.holdSet == set })
+        _betaNotes = Query(filter: #Predicate<BetaNote> { $0.problemId == id && $0.holdSet == set })
     }
 
     var body: some View {
@@ -161,8 +163,10 @@ private struct SessionProblemView: View {
                 .accessibilityHint("Tap for hold pictures. Turn the Digital Crown for the next problem")
             SideColumn(problem: problem, stats: stats, isProject: isProject, scale: settings.gradeScale,
                        compact: compact,
+                       hasBeta: !betaNotes.isEmpty,
                        onAttempt: model.logAttempt, onSent: model.markSent, onUnsend: model.unsend,
-                       onStar: model.toggleProject)
+                       onStar: model.toggleProject,
+                       onBeta: { router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet)) })
                 .frame(width: SideColumn.width)
         }
         .padding(.top, 8)
@@ -236,10 +240,29 @@ private struct SideColumn: View {
     let onSent: () -> Void
     let onUnsend: () -> Void
     let onStar: () -> Void
+    /// Whether the problem has beta notes.
+    let hasBeta: Bool
+    let onBeta: () -> Void
+
+    init(problem: Problem, stats: ProblemStats, isProject: Bool, scale: GradeScale, compact: Bool, hasBeta: Bool,
+         onAttempt: @escaping () -> Void, onSent: @escaping () -> Void, onUnsend: @escaping () -> Void,
+         onStar: @escaping () -> Void, onBeta: @escaping () -> Void) {
+        self.problem = problem
+        self.stats = stats
+        self.isProject = isProject
+        self.scale = scale
+        self.compact = compact
+        self.hasBeta = hasBeta
+        self.onAttempt = onAttempt
+        self.onSent = onSent
+        self.onUnsend = onUnsend
+        self.onStar = onStar
+        self.onBeta = onBeta
+    }
 
     var body: some View {
-        // Grade, tries and star sit together at the top; Light it is raised and
-        // pulled in from the screen's rounded bottom-right corner.
+        // Grade, tries, Proj and Beta sit together at the top; Light it is raised
+        // and pulled in from the screen's rounded bottom-right corner.
         VStack(alignment: .leading, spacing: compact ? 1 : 6) {
             HStack(alignment: .center, spacing: 5) {
                 Text(problem.grade(scale))
@@ -249,26 +272,37 @@ private struct SideColumn: View {
                 if problem.isBenchmark { BenchmarkBadge() }
             }
             attempts
-            HStack(spacing: 5) {
-                Image(systemName: isProject ? "star.fill" : "star")
-                    .font(.system(size: 21, weight: .semibold))
-                Text("Star")
-                    .font(.footnote.weight(.semibold))
-                    .lineLimit(1)
-            }
-                .foregroundStyle(isProject ? Theme.white : Theme.secondaryText)
-                .frame(maxWidth: .infinity, minHeight: compact ? 26 : 32, alignment: .leading)
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onStar)
-                .accessibilityAddTraits(.isButton)
-                .accessibilityLabel(isProject ? "Project. Tap to unstar" : "Star as a project")
-                .accessibilityAction { onStar() }
+            toggleRow(icon: isProject ? "star.fill" : "star", text: "Proj", on: isProject, action: onStar)
+                .accessibilityLabel(isProject ? "Project. Tap to unmark" : "Mark as a project")
+                .accessibilityIdentifier("projectToggle")
+            toggleRow(icon: "pencil", text: "Beta", on: hasBeta, action: onBeta)
+                .accessibilityLabel(hasBeta ? "Beta notes. Tap to read" : "Add beta notes")
+                .accessibilityIdentifier("betaButton")
             Spacer(minLength: 0)
             LightControls(problem: problem)
                 .padding(.trailing, 6)
                 .padding(.bottom, compact ? 8 : 14)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    /// An icon and a short word, white when on and gray when off ("Proj", "Beta").
+    private func toggleRow(icon: String, text: String, on: Bool, action: @escaping () -> Void) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 19, weight: .semibold))
+                .frame(width: 22)
+            Text(text)
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(on ? Theme.white : Theme.secondaryText)
+        .frame(maxWidth: .infinity, minHeight: compact ? 24 : 28, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: action)
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { action() }
     }
 
     /// Tap: +1 attempt. Hold: Sent, or, if already sent, Unsend (the latest send becomes an attempt).

@@ -2,16 +2,23 @@ import Foundation
 
 /// History: logs grouped by calendar day in the watch's time zone, newest day first.
 nonisolated enum History {
+    /// An attempt or send, or (with `highPoint` set) a high point being marked,
+    /// which isn't an attempt.
     struct Item: Sendable {
         let problemId: String
         let date: Date
         let isSend: Bool
+        var highPoint: String?
     }
 
     struct ProblemDay: Identifiable, Equatable, Sendable {
         let problemId: String
         var attempts: Int
         var sends: Int
+        /// The last high point marked on this problem that day, if any.
+        var highPoint: String?
+        /// When it was marked.
+        var highPointDate: Date?
         /// Latest log of this problem that day; rows are ordered by it.
         var lastDate: Date
 
@@ -35,8 +42,15 @@ nonisolated enum History {
             let day = calendar.startOfDay(for: item.date)
             var problem = byDay[day]?[item.problemId]
                 ?? ProblemDay(problemId: item.problemId, attempts: 0, sends: 0, lastDate: item.date)
-            problem.attempts += 1
-            if item.isSend { problem.sends += 1 }
+            if let highPoint = item.highPoint {
+                if problem.highPointDate.map({ item.date >= $0 }) ?? true {
+                    problem.highPoint = highPoint
+                    problem.highPointDate = item.date
+                }
+            } else {
+                problem.attempts += 1
+                if item.isSend { problem.sends += 1 }
+            }
             problem.lastDate = max(problem.lastDate, item.date)
             byDay[day, default: [:]][item.problemId] = problem
         }

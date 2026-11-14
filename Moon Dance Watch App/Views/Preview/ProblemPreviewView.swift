@@ -13,11 +13,16 @@ import SwiftUI
 /// problem, so it replaces the last). Long-pressing the finish logs a send; start
 /// holds can't be a high point.
 ///
-/// A climber of your height (Settings › Your height, 6 ft by default) stands to
-/// the right of the board at the same scale, to help judge the distance between
-/// holds. Tapping the climber opens the height picker.
+/// Tap a hold (or any bolt) to flash its coordinates, such as "G13", above it.
+/// "Beta" beside Back shows your notes over the board (or, with none yet, opens
+/// the editor).
 struct ProblemPreviewView: View {
     let problemID: String
+
+    init(problemID: String) {
+        self.problemID = problemID
+        _betaNotes = Query(filter: #Predicate<BetaNote> { $0.problemId == problemID })
+    }
 
     static let longPressDuration: Duration = .milliseconds(500)
     /// How far a finger can drift before a touch becomes a pan, in points.
@@ -27,8 +32,10 @@ struct ProblemPreviewView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Environment(AppModel.self) private var model
-    @Environment(AppSettings.self) private var settings
     @Query private var highPoints: [HighPoint]
+    @Query private var betaNotes: [BetaNote]
+    @State private var flash: Flash?
+    @State private var showBeta = false
     @State private var problem: Problem?
     @State private var zoom = 1.0
     @State private var centre = PreviewGeometry.boardCentre
@@ -48,10 +55,20 @@ struct ProblemPreviewView: View {
         var longPressed = false
     }
 
+    /// A hold's coordinates, shown above it for a moment after a tap.
+    struct Flash: Equatable {
+        let id = UUID()
+        let position: GridPosition
+    }
+
     /// A short note after a long press ("High point G13", "Sent", …).
     private struct Message: Equatable {
         let id = UUID()
         let text: String
+    }
+
+    private var betaNote: BetaNote? {
+        betaNotes.first { $0.holdSet == problem?.holdSet }
     }
 
     private var highPoint: String? {
@@ -66,8 +83,7 @@ struct ProblemPreviewView: View {
             Canvas { context, canvasSize in
                 guard let problem else { return }
                 let geometry = PreviewGeometry(size: canvasSize, zoom: zoom, centre: centre)
-                Self.draw(problem, highPoint: highPoint, climberHeight: settings.climberHeight,
-                          geometry: geometry, in: &context)
+                Self.draw(problem, highPoint: highPoint, flash: flash?.position, geometry: geometry, in: &context)
             }
             .contentShape(Rectangle())
             .gesture(touches(size: size))
@@ -81,7 +97,8 @@ struct ProblemPreviewView: View {
         }
         .background(Theme.background)
         .ignoresSafeArea()
-        .overlay(alignment: .topLeading) { backButton }
+        .overlay(alignment: .topLeading) { topBar }
+        .overlay(alignment: .bottom) { betaPanel }
         .overlay(alignment: .bottom) { messageView }
         .toolbar(.hidden, for: .navigationBar)
         .focusable()
@@ -93,12 +110,100 @@ struct ProblemPreviewView: View {
         .onAppear {
             problem = SessionModel.problem(id: problemID, context: context)
             crownFocused = true
+            // Screenshots: -previewFlash G13 shows a coordinate; -previewBeta YES opens the notes.
+            if let name = RuntimeEnvironment.debugValue("previewFlash"), let position = GridPosition(name) {
+                flash = Flash(position: position)
+            }
+            if RuntimeEnvironment.debugValue("previewBeta") != nil { showBeta = true }
             // Screenshots: -previewZoom 3 -previewCentre 6,10 (board units).
             if let value = RuntimeEnvironment.debugValue("previewZoom"), let debugZoom = Double(value) {
                 zoom = debugZoom
                 let parts = RuntimeEnvironment.debugValue("previewCentre")?.split(separator: ",").compactMap { Double($0) }
                 if let parts, parts.count == 2 { centre = CGPoint(x: parts[0], y: parts[1]) }
             }
+        }
+    }
+
+    /// Back and Beta, small, on the clock's line.
+    private var topBar: some View {
+        HStack(spacing: 2) {
+            backButton
+            betaButton
+        }
+        .padding(.top, SessionView.Header.top)
+        .padding(.leading, SessionView.Header.leading - 4)
+        .ignoresSafeArea()
+    }
+
+    /// Shows or hides your notes over the board; with no notes yet, opens the editor.
+    private var betaButton: some View {
+        Button {
+            if betaNote == nil {
+                if let problem { router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet)) }
+            } else {
+                withAnimation(.snappy) { showBeta.toggle() }
+            }
+        } label: {
+            HStack(spacing: 2) {
+                Image(systemName: "pencil")
+                Text("Beta")
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(betaNote == nil ? Theme.secondaryText : (showBeta ? Theme.blue : Theme.white))
+            .frame(minHeight: SessionView.Header.height)
+            .padding(.horizontal, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("previewBeta")
+    }
+
+    /// Your notes over the bottom of the board (up to five lines; tap them for the
+    /// rest), with Edit and a close button.
+    @ViewBuilder
+    private var betaPanel: some View {
+        if showBeta, let note = betaNote, let problem {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(note.text)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.white)
+                    .lineLimit(5)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet))
+                    }
+                    .accessibilityIdentifier("previewBetaText")
+                HStack {
+                    Button {
+                        router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet))
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Theme.blue)
+                    }
+                    .buttonStyle(.plain)
+                    Spacer()
+                    Button {
+                        withAnimation(.snappy) { showBeta = false }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.footnote.weight(.bold))
+                            .foregroundStyle(Theme.secondaryText)
+                            .frame(width: 30, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Hide beta")
+                }
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.card.opacity(0.96)))
+            .padding(.horizontal, 10)
+            .padding(.bottom, 10)
+            .ignoresSafeArea(edges: .bottom)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
@@ -119,9 +224,6 @@ struct ProblemPreviewView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.top, SessionView.Header.top)
-        .padding(.leading, SessionView.Header.leading - 4)
-        .ignoresSafeArea()
         .accessibilityIdentifier("previewBack")
     }
 
@@ -177,12 +279,6 @@ struct ProblemPreviewView: View {
                 let ended = touch
                 touch = nil
                 guard let ended, !ended.moved, !ended.longPressed else { return }
-                let geometry = PreviewGeometry(size: size, zoom: zoom, centre: centre)
-                if geometry.climberHitRect(heightInches: settings.climberHeight).contains(ended.start) {
-                    lastTap = nil
-                    router.push(.heightPicker)
-                    return
-                }
                 if let lastTap, Date.now.timeIntervalSince(lastTap) < Self.doubleTapInterval {
                     self.lastTap = nil
                     withAnimation(.snappy) {
@@ -191,8 +287,26 @@ struct ProblemPreviewView: View {
                     }
                 } else {
                     lastTap = .now
+                    flashHold(at: ended.start, size: size)
                 }
             }
+    }
+
+    /// Flashes the coordinates of the hold under a tap: a problem hold first, else
+    /// any bolt on the hold set.
+    private func flashHold(at point: CGPoint, size: CGSize) {
+        guard let problem else { return }
+        let geometry = PreviewGeometry(size: size, zoom: zoom, centre: centre)
+        let holds = problem.holds.compactMap { GridPosition($0.position) }
+        let bolts = (HoldImages.shared.info(for: problem.holdSet)?.positions ?? []).compactMap { GridPosition($0) }
+        guard let position = geometry.position(at: point, among: holds) ?? geometry.position(at: point, among: bolts)
+        else { return }
+        let new = Flash(position: position)
+        flash = new
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            if flash?.id == new.id { flash = nil }
+        }
     }
 
     private func longPress(at point: CGPoint, size: CGSize) {
@@ -222,7 +336,7 @@ struct ProblemPreviewView: View {
 
     // MARK: - Drawing
 
-    private static func draw(_ problem: Problem, highPoint: String?, climberHeight: Int,
+    private static func draw(_ problem: Problem, highPoint: String?, flash: GridPosition?,
                              geometry g: PreviewGeometry, in context: inout GraphicsContext) {
         let images = HoldImages.shared
         let scale = g.scale
@@ -276,20 +390,29 @@ struct ProblemPreviewView: View {
                            style: StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round))
         }
 
-        drawClimber(heightInches: climberHeight, g, in: &context)
         drawLabels(g, in: &context)
+        if let flash { drawFlash(flash, g, in: &context) }
     }
 
-    /// A standing figure your height, beside the board at the board's scale, with
-    /// the height floating above its head.
-    private static func drawClimber(heightInches: Int, _ g: PreviewGeometry, in context: inout GraphicsContext) {
-        let rect = g.climberScreenRect(heightInches: heightInches)
-        context.fill(PreviewGeometry.climberPath(in: rect), with: .color(Color(white: 0.42)))
-        let fontSize = min(max(g.scale * 0.5, 9), 15)
-        context.draw(Text(AppSettings.heightText(heightInches))
-                        .font(.system(size: fontSize, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Theme.white),
-                     at: CGPoint(x: rect.midX, y: rect.minY - fontSize * 0.9))
+    /// The tapped hold's coordinates in a pill just above it (below it if that
+    /// would run under the clock), kept on screen.
+    private static func drawFlash(_ position: GridPosition, _ g: PreviewGeometry, in context: inout GraphicsContext) {
+        let hold = g.screenPoint(column: position.column, row: position.row)
+        let text = context.resolve(Text(position.name)
+            .font(.system(size: 16, weight: .bold, design: .rounded))
+            .foregroundStyle(Theme.white))
+        let size = text.measure(in: CGSize(width: 200, height: 60))
+        let width = size.width + 16
+        let height = size.height + 6
+        let gap = max(g.scale * 0.7, 10)
+        var y = hold.y - gap - height
+        if y < PreviewGeometry.topInset { y = hold.y + gap }
+        let x = min(max(hold.x - width / 2, 4), g.size.width - width - 4)
+        let pill = CGRect(x: x, y: y, width: width, height: height)
+        let shape = Path(roundedRect: pill, cornerRadius: height / 2)
+        context.fill(shape, with: .color(Color(white: 0.16)))
+        context.stroke(shape, with: .color(Theme.white), lineWidth: 1.5)
+        context.draw(text, at: CGPoint(x: pill.midX, y: pill.midY))
     }
 
     /// A–K across the top and 1–18 down the left. When zoomed in they stay pinned
@@ -332,11 +455,7 @@ nonisolated struct PreviewGeometry {
     static let gutterTop = 1.0
     /// Space on the right and bottom so outlines on column K and row 1 fit.
     static let margin = 0.25
-    /// Room on the right for the climber drawn to scale (fits a 7′6″ climber).
-    static let climberStrip = 3.3
-    /// MoonBoard holes are about 20 cm apart, across and up: one board unit.
-    static let cellCentimetres = 20.0
-    static let boardWidth = Double(GridPosition.columns) + gutterLeft + margin + climberStrip
+    static let boardWidth = Double(GridPosition.columns) + gutterLeft + margin
     static let boardHeight = Double(GridPosition.rows) + gutterTop + margin
     static let boardCentre = CGPoint(x: boardWidth / 2, y: boardHeight / 2)
     static let zoomRange: ClosedRange<Double> = 1...4
@@ -397,58 +516,6 @@ nonisolated struct PreviewGeometry {
             return nil
         }
         return nearest
-    }
-
-    /// The climber's box in board units: feet level with the bottom of row 1,
-    /// centred in the strip to the right of column K, as tall as you are.
-    static func climberRect(heightInches: Int) -> CGRect {
-        let height = Double(heightInches) * 2.54 / cellCentimetres
-        let width = height * climberWidthRatio
-        let feet = gutterTop + Double(GridPosition.rows)
-        let middle = gutterLeft + Double(GridPosition.columns) + margin + climberStrip / 2
-        return CGRect(x: middle - width / 2, y: feet - height, width: width, height: height)
-    }
-
-    /// Shoulder-to-shoulder, arms included, as a share of height.
-    static let climberWidthRatio = 0.27
-
-    func climberScreenRect(heightInches: Int) -> CGRect {
-        let board = Self.climberRect(heightInches: heightInches)
-        let origin = screenPoint(boardX: board.minX, boardY: board.minY)
-        return CGRect(x: origin.x, y: origin.y, width: board.width * scale, height: board.height * scale)
-    }
-
-    /// Where a tap opens the height picker: the climber, its label, and a little
-    /// slop so it's easy to hit at zoom 1.
-    func climberHitRect(heightInches: Int) -> CGRect {
-        let rect = climberScreenRect(heightInches: heightInches)
-        return CGRect(x: rect.minX - 8, y: rect.minY - 24, width: rect.width + 16, height: rect.height + 32)
-    }
-
-    /// A simple standing figure filling `rect`: head, torso, arms at the sides, legs.
-    static func climberPath(in rect: CGRect) -> Path {
-        let h = rect.height
-        let cx = rect.midX
-        func y(_ fraction: CGFloat) -> CGFloat { rect.minY + fraction * h }
-        var path = Path()
-        let head = 0.065 * h
-        path.addEllipse(in: CGRect(x: cx - head, y: y(0), width: head * 2, height: head * 2))
-        let torso = 0.085 * h
-        path.addRoundedRect(in: CGRect(x: cx - torso, y: y(0.14), width: torso * 2, height: 0.38 * h),
-                            cornerSize: CGSize(width: 0.04 * h, height: 0.04 * h))
-        let arm = 0.045 * h
-        for side in [-1.0, 1.0] {
-            let x = side < 0 ? cx - torso - 0.005 * h - arm : cx + torso + 0.005 * h
-            path.addRoundedRect(in: CGRect(x: x, y: y(0.15), width: arm, height: 0.35 * h),
-                                cornerSize: CGSize(width: arm / 2, height: arm / 2))
-        }
-        let leg = 0.075 * h
-        for side in [-1.0, 1.0] {
-            let x = side < 0 ? cx - 0.005 * h - leg : cx + 0.005 * h
-            path.addRoundedRect(in: CGRect(x: x, y: y(0.48), width: leg, height: 0.52 * h),
-                                cornerSize: CGSize(width: leg / 2, height: leg / 2))
-        }
-        return path
     }
 
     /// A closed, smooth curve through an outline's points: quadratic curves between

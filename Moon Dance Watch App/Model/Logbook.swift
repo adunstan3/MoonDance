@@ -109,11 +109,57 @@ enum Logbook {
     }
 
     /// Sets the problem's one high point, replacing any other; nil removes it.
+    /// Marking one is also recorded for History (a `HighPointMark`); clearing isn't.
     static func setHighPoint(_ position: String?, for problem: Problem, in context: ModelContext,
                              at date: Date = .now) {
         highPoints(for: problem, in: context).forEach(context.delete)
         if let position {
             context.insert(HighPoint(problemId: problem.problemId, holdSet: problem.holdSet, position: position, date: date))
+            context.insert(HighPointMark(problemId: problem.problemId, holdSet: problem.holdSet, position: position,
+                                         date: date))
+        }
+        save(context)
+    }
+
+    /// High points marked on a problem on one calendar day, oldest first.
+    static func highPointMarks(problemId: String, holdSet: String, on day: Date, calendar: Calendar = .current,
+                               in context: ModelContext) -> [HighPointMark] {
+        let start = calendar.startOfDay(for: day)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return [] }
+        let descriptor = FetchDescriptor<HighPointMark>(
+            predicate: #Predicate { $0.problemId == problemId && $0.holdSet == holdSet && $0.date >= start && $0.date < end },
+            sortBy: [SortDescriptor(\.date)])
+        return (try? context.fetch(descriptor)) ?? []
+    }
+
+    /// Deletes high point markings from History. The current high point stays.
+    static func delete(_ marks: [HighPointMark], in context: ModelContext) {
+        marks.forEach(context.delete)
+        save(context)
+    }
+
+    // MARK: - Beta
+
+    static func beta(problemId: String, holdSet: String, in context: ModelContext) -> BetaNote? {
+        var descriptor = FetchDescriptor<BetaNote>(predicate: #Predicate { $0.problemId == problemId && $0.holdSet == holdSet })
+        descriptor.fetchLimit = 1
+        return try? context.fetch(descriptor).first
+    }
+
+    /// Saves a problem's beta; blank text removes it.
+    static func setBeta(_ text: String, problemId: String, holdSet: String, in context: ModelContext,
+                        at date: Date = .now) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let descriptor = FetchDescriptor<BetaNote>(predicate: #Predicate { $0.problemId == problemId && $0.holdSet == holdSet })
+        let existing = (try? context.fetch(descriptor)) ?? []
+        if trimmed.isEmpty {
+            existing.forEach(context.delete)
+        } else if let note = existing.first {
+            note.text = trimmed
+            note.updated = date
+            existing.dropFirst().forEach(context.delete)
+        } else {
+            context.insert(BetaNote(problemId: problemId, holdSet: holdSet, text: trimmed, updated: date))
         }
         save(context)
     }

@@ -11,8 +11,8 @@ enum Route: Hashable {
     case export
     /// Full-screen hold pictures for a problem (by problem id).
     case problemPreview(String)
-    /// Your height, for the climber drawn beside the hold pictures.
-    case heightPicker
+    /// Your beta (notes) for a problem: view, or edit if there are none yet.
+    case beta(problemID: String, holdSet: String)
     /// Edit one problem's attempts and sends on one day (from History).
     case logEditor(problemID: String, holdSet: String, day: Date)
 }

@@ -12,6 +12,7 @@ struct LogEditorView: View {
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Query private var entries: [LogEntry]
+    @Query private var marks: [HighPointMark]
     @State private var confirmDeleteAll = false
 
     init(problemID: String, holdSet: String, day: Date, calendar: Calendar = .current) {
@@ -23,7 +24,12 @@ struct LogEditorView: View {
         _entries = Query(filter: #Predicate<LogEntry> {
             $0.problemId == problemID && $0.holdSet == holdSet && $0.date >= start && $0.date < end
         }, sort: \LogEntry.date)
+        _marks = Query(filter: #Predicate<HighPointMark> {
+            $0.problemId == problemID && $0.holdSet == holdSet && $0.date >= start && $0.date < end
+        }, sort: \HighPointMark.date)
     }
+
+    private var total: Int { entries.count + marks.count }
 
     var body: some View {
         List {
@@ -44,6 +50,27 @@ struct LogEditorView: View {
                     }
                     .accessibilityHint(entry.isSend ? "Tap to make it an attempt" : "Tap to make it a send")
                 }
+                ForEach(marks) { mark in
+                    HStack {
+                        Text(mark.date, format: .dateTime.hour().minute())
+                            .font(.headline.monospacedDigit())
+                        Spacer(minLength: 4)
+                        Label("High point \(mark.position)", systemImage: "flag.fill")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Theme.gold)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .padding(.vertical, 2)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            Logbook.delete([mark], in: context)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                        .tint(Theme.red)
+                    }
+                }
             } header: {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(problemName)
@@ -54,12 +81,12 @@ struct LogEditorView: View {
                 }
                 .textCase(nil)
             } footer: {
-                Text("Tap to switch attempt and send. Swipe left to delete.")
+                Text("Tap to switch attempt and send. Swipe left to delete. Deleting a high point here only removes it from History.")
                     .font(.caption2)
                     .foregroundStyle(Theme.secondaryText)
             }
 
-            if entries.isEmpty {
+            if total == 0 {
                 Text("Nothing logged on this day.")
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
@@ -68,17 +95,18 @@ struct LogEditorView: View {
                 Button(role: .destructive) {
                     confirmDeleteAll = true
                 } label: {
-                    Label("Delete all \(entries.count)", systemImage: "trash")
+                    Label("Delete all \(total)", systemImage: "trash")
                         .foregroundStyle(Theme.red)
                 }
                 .accessibilityIdentifier("deleteAllEntries")
             }
         }
         .navigationTitle("Edit log")
-        .confirmationDialog("Delete \(entries.count) entr\(entries.count == 1 ? "y" : "ies") for this day?",
+        .confirmationDialog("Delete \(total) entr\(total == 1 ? "y" : "ies") for this day?",
                             isPresented: $confirmDeleteAll, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 Logbook.delete(entries, in: context)
+                Logbook.delete(marks, in: context)
                 router.pop()
             }
             Button("Cancel", role: .cancel) {}

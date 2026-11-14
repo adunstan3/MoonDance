@@ -10,6 +10,7 @@ struct HistoryView: View {
     @Environment(SessionModel.self) private var session
     @Environment(Router.self) private var router
     @Query(sort: \LogEntry.date, order: .reverse) private var logs: [LogEntry]
+    @Query private var marks: [HighPointMark]
     @State private var pendingDelete: PendingDelete?
 
     /// A History row whose day of logs is waiting for "Delete?" to be confirmed.
@@ -25,6 +26,8 @@ struct HistoryView: View {
         let holdSet = settings.holdSet.rawValue
         let items = logs.filter { $0.holdSet == holdSet }
             .map { History.Item(problemId: $0.problemId, date: $0.date, isSend: $0.isSend) }
+            + marks.filter { $0.holdSet == holdSet }
+            .map { History.Item(problemId: $0.problemId, date: $0.date, isSend: false, highPoint: $0.position) }
         let days = History.days(from: items)
         let problems = SessionModel.problems(ids: Set(items.map(\.problemId)), context: context)
         List {
@@ -53,7 +56,8 @@ struct HistoryView: View {
                                 .tint(Theme.blue)
                                 Button {
                                     pendingDelete = PendingDelete(problemId: problem.problemId, name: problem.name,
-                                                                  day: day.date, count: entry.attempts)
+                                                                  day: day.date,
+                                                                  count: entry.attempts + (entry.highPoint == nil ? 0 : 1))
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
@@ -77,9 +81,11 @@ struct HistoryView: View {
                                                               set: { if !$0 { pendingDelete = nil } }),
                             titleVisibility: .visible, presenting: pendingDelete) { pending in
             Button("Delete", role: .destructive) {
-                let entries = Logbook.entries(problemId: pending.problemId, holdSet: settings.holdSet.rawValue,
-                                              on: pending.day, in: context)
-                Logbook.delete(entries, in: context)
+                let holdSet = settings.holdSet.rawValue
+                Logbook.delete(Logbook.entries(problemId: pending.problemId, holdSet: holdSet, on: pending.day,
+                                               in: context), in: context)
+                Logbook.delete(Logbook.highPointMarks(problemId: pending.problemId, holdSet: holdSet, on: pending.day,
+                                                      in: context), in: context)
             }
             Button("Cancel", role: .cancel) {}
         }
@@ -100,21 +106,32 @@ private struct HistoryRow: View {
         HStack(spacing: 6) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(problem.name).font(.headline).lineLimit(2)
-                Text("\(problem.grade(settings.gradeScale)) · \(day.attempts) attempt\(day.attempts == 1 ? "" : "s")")
+                Text(detail)
                     .font(.footnote)
                     .foregroundStyle(Theme.secondaryText)
+                if let highPoint = day.highPoint {
+                    Label("High point \(highPoint)", systemImage: "flag.fill")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.gold)
+                }
             }
             Spacer(minLength: 2)
             if day.isSent {
                 Label("Sent", systemImage: "checkmark.circle")
                     .font(.footnote.weight(.bold))
                     .foregroundStyle(Theme.green)
-            } else {
+            } else if day.attempts > 0 {
                 Text("\(day.attempts)×")
                     .font(.headline)
                     .foregroundStyle(Theme.secondaryText)
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private var detail: String {
+        let grade = problem.grade(settings.gradeScale)
+        guard day.attempts > 0 else { return grade }
+        return "\(grade) · \(day.attempts) attempt\(day.attempts == 1 ? "" : "s")"
     }
 }

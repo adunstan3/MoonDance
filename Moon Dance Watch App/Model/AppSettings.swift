@@ -30,18 +30,9 @@ final class AppSettings {
         static let gradeScale = "gradeScale"
         static let bleFlags = "bleFlags"
         static let showAllDevices = "showAllDevices"
-        static let climberHeight = "climberHeightInches"
     }
 
     static let defaultGrade = 5
-    /// The climber drawn beside the hold pictures for scale: 6 ft by default.
-    static let defaultHeight = 72
-    static let heightRange = 48...90
-
-    /// "6′0″"
-    static func heightText(_ inches: Int) -> String { "\(inches / 12)′\(inches % 12)″" }
-
-    static func centimetres(_ inches: Int) -> Int { Int((Double(inches) * 2.54).rounded()) }
 
     @ObservationIgnored let defaults: UserDefaults
 
@@ -60,8 +51,6 @@ final class AppSettings {
     var bleFlags: String { didSet { defaults.set(bleFlags, forKey: Keys.bleFlags) } }
     /// Bluetooth log option: list every device during a scan, not only LED boxes.
     var showAllDevices: Bool { didSet { defaults.set(showAllDevices, forKey: Keys.showAllDevices) } }
-    /// Your height in inches, for the climber in the hold pictures.
-    var climberHeight: Int { didSet { defaults.set(climberHeight, forKey: Keys.climberHeight) } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -75,8 +64,6 @@ final class AppSettings {
         gradeScale = GradeScale(rawValue: defaults.string(forKey: Keys.gradeScale) ?? "") ?? .v
         bleFlags = defaults.string(forKey: Keys.bleFlags) ?? ""
         showAllDevices = defaults.bool(forKey: Keys.showAllDevices)
-        let savedHeight = defaults.object(forKey: Keys.climberHeight) as? Int ?? Self.defaultHeight
-        climberHeight = Self.heightRange.contains(savedHeight) ? savedHeight : Self.defaultHeight
     }
 
     var hasSavedBoard: Bool { boardID != nil }

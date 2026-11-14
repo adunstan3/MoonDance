@@ -87,8 +87,43 @@ final class HighPoint {
     }
 }
 
+/// Each time a high point is marked, for History. `HighPoint` keeps only the
+/// current one; these keep every marking.
+@Model
+final class HighPointMark {
+    var problemId: String
+    var holdSet: String
+    /// Grid position, e.g. "G13".
+    var position: String
+    var date: Date
+
+    init(problemId: String, holdSet: String, position: String, date: Date = .now) {
+        self.problemId = problemId
+        self.holdSet = holdSet
+        self.position = position
+        self.date = date
+    }
+}
+
+/// Your beta for a problem: free-text notes, one per problem and hold set.
+@Model
+final class BetaNote {
+    var problemId: String
+    var holdSet: String
+    var text: String
+    var updated: Date
+
+    init(problemId: String, holdSet: String, text: String, updated: Date = .now) {
+        self.problemId = problemId
+        self.holdSet = holdSet
+        self.text = text
+        self.updated = updated
+    }
+}
+
 enum Store {
-    static let models: [any PersistentModel.Type] = [Problem.self, LogEntry.self, Project.self, HighPoint.self]
+    static let models: [any PersistentModel.Type] = [Problem.self, LogEntry.self, Project.self, HighPoint.self,
+                                                     HighPointMark.self, BetaNote.self]
 
     static func makeContainer(inMemory: Bool = false) throws -> ModelContainer {
         let schema = Schema(models)

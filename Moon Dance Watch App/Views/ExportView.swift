@@ -57,6 +57,7 @@ struct ExportView: View {
         var parts = [plural(export.entryCount, "entry", "entries")]
         if export.starCount > 0 { parts.append(plural(export.starCount, "star", "stars")) }
         if export.highPointCount > 0 { parts.append(plural(export.highPointCount, "high point", "high points")) }
+        if export.betaCount > 0 { parts.append(plural(export.betaCount, "beta note", "beta notes")) }
         return parts.joined(separator: " · ") + " · both hold sets"
     }
 }
