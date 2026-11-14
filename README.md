@@ -60,9 +60,8 @@ The hold grid fills the left side in the board's LED colors: **green** start hol
 - **Grade** with a white **B** badge for benchmarks.
 - **Tries** — how many attempts you've logged on this problem (see below).
 - **Proj** — tap the star to make it a project. Projects are pinned to the top of the list.
-- **✎ Beta** — opens the hold pictures with every hold's beta showing. Beta is
-  written on the holds there (see below). The pen turns white once a problem has
-  beta, and holds with beta get a small white dot on the grid.
+- **✎ Beta** — shows when the problem has beta (written on the holds in the hold
+  pictures, below); those holds get a small white dot on the grid.
 - **Light it** — sends the problem to the board.
 - **Tap the grid** for a full-screen look at the real holds (below).
 
@@ -92,10 +91,14 @@ holds) and 2024 (sets D, E and F and the wooden holds).
   long-pressing the **finish** hold logs the problem as **sent**.
 - **Tap a hold** — a callout opens beside it with its coordinates (such as **E9**),
   your **beta** for that hold (or "No beta yet") and a small **pen** to write or change
-  it (keyboard, Scribble or dictation; **Remove** clears it). Tap the hold again or
-  anywhere else to close it. Holds with beta carry a small white mark.
-- **Pen circle** (on the clock's line, next to Back) — shows every hold's beta at once,
-  in small labels beside the holds.
+  it (keyboard, Scribble or dictation). Edits save as you type; the back button
+  returns here. The red button is **Cancel** the first time and **Remove** after that.
+  Tap the hold again or anywhere else to close the callout. Holds with beta carry a
+  small white mark.
+- **Show beta** (on the clock's line, next to Back; gray when there's none) — every
+  note in a bubble to the left or right of the board, level with its hold and joined
+  to it by a line. Bubbles never overlap and their lines don't cross; pan sideways to
+  read them. **Hide beta** puts them away.
 - **‹ Back** (top left, on the clock's line) — back to Session.
 
 <br clear="right">
@@ -145,7 +148,7 @@ If a save ever fails, a red banner says so and the error goes in the Bluetooth l
 
 Tap the problem name to open the **problem list** for the current hold set and grade.
 Starred problems come first (newest star first), then the rest, most repeated first.
-Each row shows the name, grade, **B** for benchmarks, a star for projects, and either
+Each row shows the name, grade, **B** for benchmarks, a pen if it has beta, a star for projects, and either
 a green check once it's sent or how many tries you've had. The current problem is
 outlined in blue; tap any row to go to it.
 
@@ -332,7 +335,7 @@ Every script waits for a lock shared with my other watch apps (`~/Library/Caches
 build or test runs on the Mac at a time. A script that prints "Waiting for the shared build lock" is queued, not stuck.
 
 Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export|preview|editor|beta`
-(with `-previewSelect E9` and `-previewBeta YES` in the preview)
+(with `-previewSelect E9` and `-previewBeta YES` in the preview), `-openScreen holdBeta -betaHold E9`
 (with `-previewZoom 3 -previewCentre 7,9` for a zoomed preview),
 `-page history|settings`, `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent|unsend`
 `-demoLogs YES`, `-demoHighPoint YES`, `-demoStoreError YES` (the store error screen) and
@@ -361,11 +364,11 @@ Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the p
 
 ## Tests
 
-- **87 unit tests** (Swift Testing): the board protocol and LED numbering, which box a
+- **91 unit tests** (Swift Testing): the board protocol and LED numbering, which box a
   job connects to and the timeout order, the problem snapshot and its loading (version
   read from the file's first bytes), list ordering, pinning and random picks, logging,
   undo, unsend and log editing, History's day grouping (with high points), CSV export,
-  beta notes, settings, Bluetooth failure messages, the hold pictures and outlines
+  beta on holds and the Show beta bubble layout, settings, Bluetooth failure messages, the hold pictures and outlines
   (every problem hold has them), the preview's zoom and pan maths, and high points
   (one per problem, every marking recorded, start holds refused, the finish logs a
   send).

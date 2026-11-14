@@ -82,7 +82,8 @@ Button or use its long press, and the attempt/sent shortcuts were removed.)
     should disappear.
 16. In the hold pictures, tap a hold and use the pen to add beta (try dictation
     and Scribble). Check the keyboard no longer offers suggestions like "Doing
-    good". Check the white marks and the pen circle's labels are readable.
+    good". Check the white marks, and that Show beta's bubbles and lines are readable and
+    easy to pan to.
 17. Hold **Sent** on a sent problem: only the latest send should turn back into an
     attempt. In History, swipe a row left › **Edit** and fix an entry.
 18. Export logs and check the CSV now has problem_id, star, high_point and beta
