@@ -331,14 +331,9 @@ final class BoardManager: NSObject {
             knownPeripherals[found.identifier] = found
             if !loggedDevices.contains(found.identifier) {
                 loggedDevices.insert(found.identifier)
-                var details = "Found \"\(name)\" rssi \(rssi) id \(found.identifier.uuidString)"
-                if !services.isEmpty {
-                    details += " services \(services.map(\.uuidString).joined(separator: ","))"
-                }
-                if let maker = advertisement[CBAdvertisementDataManufacturerDataKey] as? Data {
-                    details += " maker data \(maker.map { String(format: "%02x", $0) }.joined())"
-                }
-                log.add(details)
+                log.add(Self.discoveryLine(name: name, rssi: rssi, identifier: found.identifier, services: services,
+                                           makerData: advertisement[CBAdvertisementDataManufacturerDataKey] as? Data,
+                                           looksLikeBoard: looksLikeBoard))
             }
             let board = DiscoveredBoard(id: found.identifier, name: name, rssi: rssi, looksLikeBoard: looksLikeBoard)
             if let index = discovered.firstIndex(where: { $0.id == board.id }) {
@@ -357,14 +352,31 @@ final class BoardManager: NSObject {
         }
     }
 
-    /// Whether a device we just heard advertising is the one to connect to for a
-    /// job: the saved box only, or with none saved, the first LED box heard.
-    /// Hearing it advertise means nobody else is connected to it right now.
-    nonisolated static func isJobTarget(_ identifier: UUID, looksLikeBoard: Bool, savedBoardID: String?) -> Bool {
-        if let savedBoardID {
-            return identifier.uuidString == savedBoardID
+    /// The log line for a device heard while scanning. Board-like devices get
+    /// everything the gym debugging needs (id, services, manufacturer data);
+    /// other devices (listed with Show all devices on) only their name and signal,
+    /// since the log is shared and they're other people's.
+    nonisolated static func discoveryLine(name: String, rssi: Int, identifier: UUID, services: [CBUUID],
+                                          makerData: Data?, looksLikeBoard: Bool) -> String {
+        guard looksLikeBoard else { return "Found other device \"\(name)\" rssi \(rssi)" }
+        var details = "Found \"\(name)\" rssi \(rssi) id \(identifier.uuidString)"
+        if !services.isEmpty {
+            details += " services \(services.map(\.uuidString).joined(separator: ","))"
         }
-        return looksLikeBoard
+        if let makerData {
+            details += " maker data \(makerData.map { String(format: "%02x", $0) }.joined())"
+        }
+        return details
+    }
+
+    /// Whether a device we just heard advertising is the one to connect to for a
+    /// job: only the saved box. With none saved there's no target (the job has
+    /// already failed, pointing to Find board), because "looks like a board" also
+    /// matches unrelated devices with the same UART service.
+    /// Hearing it advertise means nobody else is connected to it right now.
+    nonisolated static func isJobTarget(_ identifier: UUID, savedBoardID: String?) -> Bool {
+        guard let savedBoardID else { return false }
+        return identifier.uuidString == savedBoardID
     }
 
     static func describe(_ state: CBManagerState) -> String {

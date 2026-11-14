@@ -5,6 +5,10 @@ import SwiftUI
 struct MoondanceApp: App {
     private let model = AppModel.shared
 
+    init() {
+        LogExport.removeLeftoverFile()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

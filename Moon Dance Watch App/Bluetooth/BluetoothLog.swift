@@ -22,10 +22,13 @@ final class BluetoothLog {
         if entries.count > Self.maxEntries {
             entries.removeFirst(entries.count - Self.maxEntries)
         }
+        // Default (private) privacy: the system log redacts these lines unless a
+        // debugger is attached, since they can hold nearby devices' names and IDs.
+        // The full text stays in the on-screen log.
         if isError {
-            logger.error("\(text, privacy: .public)")
+            logger.error("\(text)")
         } else {
-            logger.info("\(text, privacy: .public)")
+            logger.info("\(text)")
         }
     }
 

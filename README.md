@@ -246,7 +246,11 @@ snapshots. The other columns are never changed.
 Settings › Bluetooth log records every Bluetooth step and error, for troubleshooting at
 the board. It has **Test send** (lights a fixed 2024 problem), **Clear board**, **Scan**,
 an option to list every nearby device, an optional flags packet, and **Share log** to
-send the whole log as text.
+send the whole log as text. LED boxes are logged in full (ID, services, manufacturer
+data); other devices listed with that option only get their name and signal, since
+they're other people's. The same lines go to the watch's system log with the default
+(private) setting, so they're redacted there unless a debugger is attached. The CSV
+written for **Export logs** is deleted the next time the app launches.
 
 <br clear="right">
 

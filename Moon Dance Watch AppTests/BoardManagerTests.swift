@@ -1,3 +1,4 @@
+import CoreBluetooth
 import Foundation
 import Testing
 @testable import Moon_Dance_Watch_App
@@ -55,5 +56,41 @@ struct BoardManagerTests {
         board.clearBoard()
         #expect(board.lastJob == .light)
         #expect(board.log.entries.contains { $0.text.contains("Clear ignored") })
+    }
+}
+
+/// What the shareable Bluetooth log records about devices heard while scanning.
+struct DiscoveryLogTests {
+    let id = UUID()
+    let uart = CBUUID(string: BoardProtocol.uartServiceUUID)
+    let maker = Data([0x59, 0x00, 0xab])
+
+    @Test func aBoardIsLoggedInFull() {
+        let line = BoardManager.discoveryLine(name: "Moonboard A", rssi: -60, identifier: id, services: [uart],
+                                              makerData: maker, looksLikeBoard: true)
+        #expect(line.contains("Moonboard A"))
+        #expect(line.contains("rssi -60"))
+        #expect(line.contains(id.uuidString))
+        #expect(line.contains(uart.uuidString))
+        #expect(line.contains("5900ab"))
+    }
+
+    @Test func otherDevicesOnlyGetNameAndSignal() {
+        let line = BoardManager.discoveryLine(name: "Someone's earbuds", rssi: -75, identifier: id, services: [],
+                                              makerData: maker, looksLikeBoard: false)
+        #expect(line == "Found other device \"Someone's earbuds\" rssi -75")
+        #expect(!line.contains(id.uuidString))
+        #expect(!line.contains("5900ab"))
+    }
+}
+
+struct ExportFileTests {
+    @Test func leftoverExportFileIsRemoved() throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "moondance-test-\(UUID().uuidString).csv")
+        try "date\n".write(to: url, atomically: true, encoding: .utf8)
+        LogExport.removeLeftoverFile(at: url)
+        #expect(!FileManager.default.fileExists(atPath: url.path()))
+        // Nothing there is fine too.
+        LogExport.removeLeftoverFile(at: url)
     }
 }

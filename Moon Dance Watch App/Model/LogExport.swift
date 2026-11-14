@@ -90,11 +90,21 @@ nonisolated struct LogExport: Transferable {
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .commaSeparatedText) { export in
-            let url = FileManager.default.temporaryDirectory.appending(path: CSVExport.filename)
+            let url = fileURL
             try export.csv.write(to: url, atomically: true, encoding: .utf8)
             return SentTransferredFile(url)
         }
         ProxyRepresentation(exporting: \.csv)
+    }
+
+    /// Where the share sheet's copy of the CSV is written.
+    static var fileURL: URL { FileManager.default.temporaryDirectory.appending(path: CSVExport.filename) }
+
+    /// Deletes the CSV left behind by the last export. Called at launch: ShareLink
+    /// doesn't say when the share sheet is done with the file, so it can't be
+    /// removed straight after sharing.
+    static func removeLeftoverFile(at url: URL = fileURL) {
+        try? FileManager.default.removeItem(at: url)
     }
 }
 
