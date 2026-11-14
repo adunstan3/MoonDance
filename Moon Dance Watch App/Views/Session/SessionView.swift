@@ -166,8 +166,7 @@ private struct SessionProblemView: View {
                        compact: compact,
                        hasBeta: !betaNotes.isEmpty,
                        onAttempt: model.logAttempt, onSent: model.markSent, onUnsend: model.unsend,
-                       onStar: model.toggleProject,
-                       onBeta: { router.push(.problemBeta(problem.problemId)) })
+                       onStar: model.toggleProject)
                 .frame(width: SideColumn.width)
         }
         .padding(.top, 8)
@@ -241,13 +240,12 @@ private struct SideColumn: View {
     let onSent: () -> Void
     let onUnsend: () -> Void
     let onStar: () -> Void
-    /// Whether the problem has beta notes.
+    /// Whether any of the problem's holds has beta (shown, not a button).
     let hasBeta: Bool
-    let onBeta: () -> Void
 
     init(problem: Problem, stats: ProblemStats, isProject: Bool, scale: GradeScale, compact: Bool, hasBeta: Bool,
          onAttempt: @escaping () -> Void, onSent: @escaping () -> Void, onUnsend: @escaping () -> Void,
-         onStar: @escaping () -> Void, onBeta: @escaping () -> Void) {
+         onStar: @escaping () -> Void) {
         self.problem = problem
         self.stats = stats
         self.isProject = isProject
@@ -258,12 +256,12 @@ private struct SideColumn: View {
         self.onSent = onSent
         self.onUnsend = onUnsend
         self.onStar = onStar
-        self.onBeta = onBeta
     }
 
     var body: some View {
-        // Grade, tries, Proj and Beta sit together at the top; Light it is raised
-        // and pulled in from the screen's rounded bottom-right corner.
+        // Grade, tries, Proj and (if there's any) the Beta mark sit together at the
+        // top; Light it is raised and pulled in from the screen's rounded
+        // bottom-right corner.
         VStack(alignment: .leading, spacing: compact ? 1 : 6) {
             HStack(alignment: .center, spacing: 5) {
                 Text(problem.grade(scale))
@@ -276,9 +274,22 @@ private struct SideColumn: View {
             toggleRow(icon: isProject ? "star.fill" : "star", text: "Proj", on: isProject, action: onStar)
                 .accessibilityLabel(isProject ? "Project. Tap to unmark" : "Mark as a project")
                 .accessibilityIdentifier("projectToggle")
-            toggleRow(icon: "pencil", text: "Beta", on: hasBeta, action: onBeta)
-                .accessibilityLabel(hasBeta ? "Beta. Shows it on the hold pictures" : "Beta. Tap a hold in the hold pictures to add some")
-                .accessibilityIdentifier("betaButton")
+            if hasBeta {
+                // Just an indicator: beta is read and written on the hold pictures.
+                HStack(spacing: 5) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 19, weight: .semibold))
+                        .frame(width: 22)
+                    Text("Beta")
+                        .font(.footnote.weight(.semibold))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(Theme.white)
+                .frame(minHeight: compact ? 24 : 28)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Has beta")
+                .accessibilityIdentifier("betaIndicator")
+            }
             Spacer(minLength: 0)
             LightControls(problem: problem)
                 .padding(.trailing, 6)

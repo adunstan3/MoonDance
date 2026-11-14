@@ -15,16 +15,14 @@ import SwiftUI
 ///
 /// Beta lives on the holds. Tap one of the problem's holds for a callout with its
 /// coordinates and its beta, and a pen to write or change it (empty grid points do
-/// nothing). Holds with beta get a small white mark. The pen circle beside Back
-/// shows every note at once, next to its hold.
+/// nothing). Holds with beta get a small white mark. "Show beta" beside Back
+/// lays every note out in bubbles to the left and right of the board, each with
+/// a line to its hold; pan sideways to read them.
 struct ProblemPreviewView: View {
     let problemID: String
-    /// Open with every note showing (Beta on Session).
-    let showingBeta: Bool
 
-    init(problemID: String, showingBeta: Bool = false) {
+    init(problemID: String) {
         self.problemID = problemID
-        self.showingBeta = showingBeta
         _betaNotes = Query(filter: #Predicate<BetaNote> { $0.problemId == problemID })
     }
 
@@ -42,9 +40,10 @@ struct ProblemPreviewView: View {
     @Query private var betaNotes: [BetaNote]
     @State private var selected: GridPosition?
     @State private var showAllBeta = false
-    @State private var editing: EditTarget?
     /// The open callout's height, measured, so it can sit just above its hold.
     @State private var calloutHeight: CGFloat = 70
+    /// The screen size, for re-clamping the pan when the bubbles are hidden.
+    @State private var lastSize: CGSize = .zero
     @State private var problem: Problem?
     @State private var zoom = 1.0
     @State private var centre = PreviewGeometry.boardCentre
@@ -64,12 +63,6 @@ struct ProblemPreviewView: View {
         var longPressed = false
     }
 
-    /// The hold whose beta is being written.
-    struct EditTarget: Identifiable {
-        let position: GridPosition
-        var id: String { position.name }
-    }
-
     /// A short note after a long press ("High point G13", "Sent", …).
     private struct Message: Equatable {
         let id = UUID()
@@ -86,6 +79,13 @@ struct ProblemPreviewView: View {
         return result
     }
 
+    /// The zoom and pan maths for a size, with room to pan out to the beta bubbles
+    /// when they're showing.
+    private func geometry(_ size: CGSize) -> PreviewGeometry {
+        PreviewGeometry(size: size, zoom: zoom, centre: centre,
+                        sideRoom: showAllBeta && !beta.isEmpty ? BetaBubbles.sideRoom : 0)
+    }
+
     private var highPoint: String? {
         guard let problem else { return nil }
         return highPoints.first { $0.problemId == problem.problemId && $0.holdSet == problem.holdSet }?.position
@@ -98,7 +98,7 @@ struct ProblemPreviewView: View {
             let beta = beta
             Canvas { context, canvasSize in
                 guard let problem else { return }
-                let geometry = PreviewGeometry(size: canvasSize, zoom: zoom, centre: centre)
+                let geometry = geometry(canvasSize)
                 Self.draw(problem, highPoint: highPoint, beta: beta, showAllBeta: showAllBeta,
                           selected: selected, geometry: geometry, in: &context)
             }
@@ -116,7 +116,8 @@ struct ProblemPreviewView: View {
                     callout(for: selected, text: beta[selected.name], size: size)
                 }
             }
-            .onChange(of: zoom) { centre = PreviewGeometry(size: size, zoom: zoom, centre: centre).centre }
+            .onChange(of: zoom) { centre = geometry(size).centre }
+            .onChange(of: size, initial: true) { lastSize = size }
         }
         .background(Theme.background)
         .ignoresSafeArea()
@@ -129,20 +130,9 @@ struct ProblemPreviewView: View {
         .digitalCrownRotation($zoom, from: PreviewGeometry.zoomRange.lowerBound,
                               through: PreviewGeometry.zoomRange.upperBound,
                               sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: false)
-        .sheet(item: $editing) { target in
-            HoldBetaEditor(name: target.position.name, initial: beta[target.position.name] ?? "") { text in
-                guard let problem else { return }
-                Logbook.setBeta(text, problemId: problem.problemId, holdSet: problem.holdSet,
-                                position: target.position.name, in: context)
-            }
-        }
         .onAppear {
             problem = SessionModel.problem(id: problemID, context: context)
             crownFocused = true
-            if showingBeta {
-                showAllBeta = true
-                if beta.isEmpty { show("Tap a hold to add beta") }
-            }
             // Screenshots: -previewSelect E9 opens a hold's callout; -previewBeta YES shows every note.
             if let name = RuntimeEnvironment.debugValue("previewSelect"), let position = GridPosition(name) {
                 selected = position
@@ -160,13 +150,14 @@ struct ProblemPreviewView: View {
     /// The tapped hold's coordinates and beta, beside it: above if there's room,
     /// otherwise below, kept on screen. The pen writes or changes the beta.
     private func callout(for position: GridPosition, text: String?, size: CGSize) -> some View {
-        let g = PreviewGeometry(size: size, zoom: zoom, centre: centre)
+        let g = geometry(size)
         let hold = g.screenPoint(column: position.column, row: position.row)
         let gap = max(g.scale * 0.65, 9)
         let above = hold.y - gap - calloutHeight > PreviewGeometry.topInset
         let left = min(max(hold.x - Self.calloutWidth / 2, 4), size.width - Self.calloutWidth - 4)
         return HoldCallout(name: position.name, text: text) {
-            editing = EditTarget(position: position)
+            guard let problem else { return }
+            router.push(.holdBeta(problemID: problem.problemId, holdSet: problem.holdSet, position: position.name))
         }
         .frame(width: Self.calloutWidth)
         .fixedSize(horizontal: false, vertical: true)
@@ -175,7 +166,7 @@ struct ProblemPreviewView: View {
         .transition(.opacity)
     }
 
-    /// Back and the beta pen, small, on the clock's line.
+    /// Back and Show beta, small text on the clock's line.
     private var topBar: some View {
         HStack(spacing: 4) {
             backButton
@@ -186,25 +177,28 @@ struct ProblemPreviewView: View {
         .ignoresSafeArea()
     }
 
-    /// A small pen circle: shows or hides every note next to its hold.
+    /// "Show beta" / "Hide beta": lays every note out beside the board. Gray, and
+    /// just a hint, when the problem has no beta.
     private var betaToggle: some View {
         Button {
             if beta.isEmpty {
                 show("Tap a hold to add beta")
             } else {
-                withAnimation(.snappy) { showAllBeta.toggle() }
+                withAnimation(.snappy) {
+                    showAllBeta.toggle()
+                    if !showAllBeta { centre = geometry(lastSize).centre }
+                }
             }
         } label: {
-            Image(systemName: "pencil")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(showAllBeta && !beta.isEmpty ? .white : (beta.isEmpty ? Theme.secondaryText : Theme.white))
-                .frame(width: 26, height: 26)
-                .background(Circle().fill(showAllBeta && !beta.isEmpty ? Theme.blue : Theme.card))
+            Text(showAllBeta && !beta.isEmpty ? "Hide beta" : "Show beta")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(beta.isEmpty ? Theme.secondaryText : Theme.blue)
+                .lineLimit(1)
                 .frame(minHeight: SessionView.Header.height)
+                .padding(.horizontal, 4)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(showAllBeta ? "Hide beta" : "Show beta")
         .accessibilityIdentifier("previewBeta")
     }
 
@@ -253,7 +247,7 @@ struct ProblemPreviewView: View {
     private func touches(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
-                let geometry = PreviewGeometry(size: size, zoom: zoom, centre: centre)
+                let geometry = geometry(size)
                 if touch == nil {
                     let new = Touch(start: value.startLocation, centre: geometry.centre)
                     touch = new
@@ -298,7 +292,7 @@ struct ProblemPreviewView: View {
     /// again, or anywhere that isn't one of the problem's holds, closes it.
     private func tap(at point: CGPoint, size: CGSize) {
         guard let problem else { return }
-        let geometry = PreviewGeometry(size: size, zoom: zoom, centre: centre)
+        let geometry = geometry(size)
         let holds = problem.holds.compactMap { GridPosition($0.position) }
         let position = geometry.position(at: point, among: holds)
         withAnimation(.snappy(duration: 0.15)) {
@@ -308,7 +302,7 @@ struct ProblemPreviewView: View {
 
     private func longPress(at point: CGPoint, size: CGSize) {
         guard let problem else { return }
-        let geometry = PreviewGeometry(size: size, zoom: zoom, centre: centre)
+        let geometry = geometry(size)
         let positions = problem.holds.compactMap { GridPosition($0.position) }
         guard let position = geometry.position(at: point, among: positions) else { return }
         switch model.markHighPoint(position, on: problem) {
@@ -394,15 +388,17 @@ struct ProblemPreviewView: View {
             context.stroke(Path(ellipseIn: CGRect(x: centre.x - r, y: centre.y - r, width: r * 2, height: r * 2)),
                            with: .color(Theme.white), lineWidth: 1.5)
         }
-        drawBeta(beta, showAll: showAllBeta, selected: selected, g, in: &context)
         drawLabels(g, in: &context)
+        drawBeta(beta, showAll: showAllBeta, selected: selected, g, in: &context)
     }
 
     /// A small white mark at the top right of every hold with beta, and with
-    /// "show all" on, each note in a small pill beside its hold.
+    /// "Show beta" on, every note in a bubble to the left or right of the board,
+    /// with a line to its hold (see `BetaBubbles`).
     private static func drawBeta(_ beta: [String: String], showAll: Bool, selected: GridPosition?,
                                  _ g: PreviewGeometry, in context: inout GraphicsContext) {
-        for (name, text) in beta.sorted(by: { $0.key < $1.key }) {
+        // The marks; with the bubbles showing, their lines mark the holds instead.
+        for name in beta.keys where !showAll {
             guard let position = GridPosition(name) else { continue }
             let hold = g.screenPoint(column: position.column, row: position.row)
             let r = max(g.scale * 0.16, 3)
@@ -410,24 +406,42 @@ struct ProblemPreviewView: View {
             let dot = Path(ellipseIn: CGRect(x: mark.x - r, y: mark.y - r, width: r * 2, height: r * 2))
             context.fill(dot, with: .color(Theme.white))
             context.stroke(dot, with: .color(Theme.background), lineWidth: 1)
+        }
+        guard showAll else { return }
 
-            guard showAll, position != selected else { continue }
+        var labels: [String: GraphicsContext.ResolvedText] = [:]
+        var notes: [BetaBubbles.Note] = []
+        for (name, text) in beta {
+            guard let position = GridPosition(name) else { continue }
             let label = context.resolve(Text(text)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Theme.white))
-            let maxWidth: CGFloat = 84
-            let size = label.measure(in: CGSize(width: maxWidth, height: 28))
-            let width = size.width + 10
-            let height = min(size.height, 28) + 4
-            let gap = max(g.scale * 0.6, 7)
-            // Right of the hold, or left if it would run off the screen.
-            var x = hold.x + gap
-            if x + width > g.size.width - 2 { x = hold.x - gap - width }
-            let pill = CGRect(x: x, y: hold.y - height / 2, width: width, height: height)
-            let shape = Path(roundedRect: pill, cornerRadius: 6)
-            context.fill(shape, with: .color(Color(white: 0.16).opacity(0.94)))
+            labels[name] = label
+            let measured = label.measure(in: CGSize(width: BetaBubbles.textWidth, height: BetaBubbles.maxTextHeight))
+            notes.append(.init(position: position,
+                               size: CGSize(width: min(measured.width, BetaBubbles.textWidth) + 2 * BetaBubbles.padding,
+                                            height: min(measured.height, BetaBubbles.maxTextHeight) + 2 * BetaBubbles.padding)))
+        }
+        for bubble in BetaBubbles.layout(notes, geometry: g) {
+            guard let label = labels[bubble.position.name] else { continue }
+            // The line, from the bubble's inner edge to the edge of the hold.
+            let hold = g.screenPoint(column: bubble.position.column, row: bubble.position.row)
+            let start = CGPoint(x: bubble.onLeft ? bubble.rect.maxX : bubble.rect.minX, y: bubble.rect.midY)
+            let dx = start.x - hold.x, dy = start.y - hold.y
+            let length = max(hypot(dx, dy), 0.001)
+            let reach = g.scale * 0.5
+            let end = CGPoint(x: hold.x + dx / length * reach, y: hold.y + dy / length * reach)
+            var line = Path()
+            line.move(to: start)
+            line.addLine(to: end)
+            context.stroke(line, with: .color(Theme.white.opacity(0.55)), lineWidth: 1)
+            context.fill(Path(ellipseIn: CGRect(x: end.x - 2, y: end.y - 2, width: 4, height: 4)),
+                         with: .color(Theme.white.opacity(0.8)))
+
+            let shape = Path(roundedRect: bubble.rect, cornerRadius: 6)
+            context.fill(shape, with: .color(Color(white: 0.16)))
             context.stroke(shape, with: .color(Theme.white.opacity(0.6)), lineWidth: 1)
-            context.draw(label, in: pill.insetBy(dx: 5, dy: 2))
+            context.draw(label, in: bubble.rect.insetBy(dx: BetaBubbles.padding, dy: BetaBubbles.padding))
         }
     }
 
@@ -485,12 +499,16 @@ nonisolated struct PreviewGeometry {
 
     let size: CGSize
     let zoom: Double
+    /// Extra points you can pan past the left and right edges (room for the beta
+    /// bubbles when they're showing).
+    let sideRoom: CGFloat
     /// The board point shown in the middle of the viewport (always kept in bounds).
     private(set) var centre: CGPoint
 
-    init(size: CGSize, zoom: Double, centre: CGPoint) {
+    init(size: CGSize, zoom: Double, centre: CGPoint, sideRoom: CGFloat = 0) {
         self.size = size
         self.zoom = zoom
+        self.sideRoom = sideRoom
         self.centre = centre
         self.centre = clamped(centre)
     }
@@ -552,14 +570,15 @@ nonisolated struct PreviewGeometry {
     /// viewport you can pan until its edge meets the viewport's edge; where it fits,
     /// it stays centred. Either way you can go `overscroll` points further.
     func clamped(_ point: CGPoint) -> CGPoint {
-        let over = Self.overscroll / scale
-        func axis(_ value: CGFloat, board: CGFloat, half: CGFloat) -> CGFloat {
+        func axis(_ value: CGFloat, board: CGFloat, half: CGFloat, over: CGFloat) -> CGFloat {
             let low = min(half, board / 2) - over
             let high = max(board - half, board / 2) + over
             return min(max(value, low), high)
         }
-        return CGPoint(x: axis(point.x, board: Self.boardWidth, half: viewport.width / (2 * scale)),
-                       y: axis(point.y, board: Self.boardHeight, half: viewport.height / (2 * scale)))
+        return CGPoint(x: axis(point.x, board: Self.boardWidth, half: viewport.width / (2 * scale),
+                               over: (Self.overscroll + sideRoom) / scale),
+                       y: axis(point.y, board: Self.boardHeight, half: viewport.height / (2 * scale),
+                               over: Self.overscroll / scale))
     }
 
     /// Where the column letters go: in their gutter, or pinned under the clock line

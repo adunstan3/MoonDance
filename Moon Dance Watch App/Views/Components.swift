@@ -40,15 +40,22 @@ struct SentCheck: View {
     }
 }
 
-/// "★ 7×" / "✓" trailing info for a problem row.
+/// "✎ ★ 7×" / "✓" trailing info for a problem row: a pen if it has beta.
 struct ProblemRowTrailing: View {
     let stats: ProblemStats
     let isProject: Bool
+    var hasBeta = false
     /// Projects list: always show the star.
     var showsStar = true
 
     var body: some View {
         HStack(spacing: 4) {
+            if hasBeta {
+                Image(systemName: "pencil")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.white)
+                    .accessibilityLabel("Has beta")
+            }
             if isProject && showsStar {
                 Image(systemName: "star.fill")
                     .foregroundStyle(Theme.white)

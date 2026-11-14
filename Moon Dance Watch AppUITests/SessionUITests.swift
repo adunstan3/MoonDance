@@ -141,15 +141,13 @@ final class SessionUITests: XCTestCase {
         wait(for: [reset], timeout: 5)
     }
 
-    /// Beta on Session opens the hold pictures; tapping a hold opens its callout,
-    /// whose pen opens the editor. Tapping an empty grid point shows nothing. The
-    /// first problem under -uiTesting has a hand hold on E9.
+    /// In the hold pictures, tapping a hold opens its callout, whose pen opens the
+    /// editor (Cancel the first time). Tapping an empty grid point shows nothing.
+    /// The first problem under -uiTesting has a hand hold on E9.
     @MainActor
     func testBetaIsWrittenOnAHold() throws {
         let app = launchToSession()
-        let beta = app.descendants(matching: .any)["betaButton"].firstMatch
-        XCTAssertTrue(beta.waitForExistence(timeout: 5))
-        beta.tap()
+        app.descendants(matching: .any)["holdGrid"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["problemPreview"].firstMatch.waitForExistence(timeout: 10))
 
         let callout = app.descendants(matching: .any)["holdCallout"].firstMatch
@@ -161,5 +159,10 @@ final class SessionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["E9"].exists)
         app.buttons["editHoldBeta"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["holdBetaField"].firstMatch.waitForExistence(timeout: 5))
+        // New beta: Cancel, not Remove, and no Save (edits save as you go).
+        XCTAssertTrue(app.buttons["cancelHoldBeta"].exists)
+        XCTAssertFalse(app.buttons["removeHoldBeta"].exists)
+        app.buttons["cancelHoldBeta"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["problemPreview"].firstMatch.waitForExistence(timeout: 5))
     }
 }

@@ -8,11 +8,13 @@ struct ProblemListView: View {
     @Environment(Router.self) private var router
     @Query private var logs: [LogEntry]
     @Query private var projects: [Project]
+    @Query private var betaNotes: [BetaNote]
 
     var body: some View {
         let holdSet = settings.holdSet.rawValue
         let stats = LogStats(entries: logs, holdSet: holdSet)
         let projectIDs = Set(projects.filter { $0.holdSet == holdSet }.map(\.problemId))
+        let betaIDs = Set(betaNotes.filter { $0.holdSet == holdSet }.map(\.problemId))
         ScrollViewReader { proxy in
             List {
                 header
@@ -30,7 +32,8 @@ struct ProblemListView: View {
                         router.pop()
                     } label: {
                         ProblemRow(problem: problem, stats: stats[problem.problemId],
-                                   isProject: projectIDs.contains(problem.problemId))
+                                   isProject: projectIDs.contains(problem.problemId),
+                                   hasBeta: betaIDs.contains(problem.problemId))
                     }
                     .listRowBackground(
                         RoundedRectangle(cornerRadius: 14)
@@ -92,6 +95,7 @@ struct ProblemRow: View {
     let problem: Problem
     let stats: ProblemStats
     let isProject: Bool
+    var hasBeta = false
 
     var body: some View {
         HStack(spacing: 6) {
@@ -102,7 +106,7 @@ struct ProblemRow: View {
                 GradeLine(problem: problem)
             }
             Spacer(minLength: 2)
-            ProblemRowTrailing(stats: stats, isProject: isProject)
+            ProblemRowTrailing(stats: stats, isProject: isProject, hasBeta: hasBeta)
         }
         .padding(.vertical, 4)
     }

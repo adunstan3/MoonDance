@@ -136,3 +136,53 @@ struct PreviewGeometryTests {
         #expect(zoomed.numberColumnX(band: 14).pinned)
     }
 }
+
+/// Show beta's bubbles: beside the board, level with their holds, never overlapping.
+struct BetaBubblesTests {
+    let g = PreviewGeometry(size: CGSize(width: 205, height: 251), zoom: 1, centre: PreviewGeometry.boardCentre,
+                            sideRoom: BetaBubbles.sideRoom)
+
+    private func note(_ name: String, height: CGFloat = 24) -> BetaBubbles.Note {
+        BetaBubbles.Note(position: GridPosition(name)!, size: CGSize(width: 60, height: height))
+    }
+
+    @Test func sidesFollowTheColumns() {
+        let bubbles = BetaBubbles.layout([note("B9"), note("J12"), note("F5")], geometry: g)
+        let side = Dictionary(uniqueKeysWithValues: bubbles.map { ($0.position.name, $0.onLeft) })
+        #expect(side["B9"] == true)
+        #expect(side["J12"] == false)
+        // The board's left edge is right of every left bubble, and so on.
+        let boardLeft = g.screenPoint(boardX: 0, boardY: 0).x
+        let boardRight = g.screenPoint(boardX: PreviewGeometry.boardWidth, boardY: 0).x
+        for bubble in bubbles {
+            if bubble.onLeft { #expect(bubble.rect.maxX < boardLeft) } else { #expect(bubble.rect.minX > boardRight) }
+        }
+    }
+
+    @Test func aLoneBubbleIsLevelWithItsHold() throws {
+        let bubble = try #require(BetaBubbles.layout([note("C9")], geometry: g).first)
+        let hold = g.screenPoint(column: 2, row: 9)
+        #expect(abs(bubble.rect.midY - hold.y) < 0.01)
+    }
+
+    @Test func crowdedBubblesKeepOrderWithoutOverlapping() {
+        let names = ["A10", "B10", "C11", "D9", "E10", "A9"]
+        let bubbles = BetaBubbles.layout(names.map { note($0, height: 30) }, geometry: g)
+        #expect(bubbles.count == names.count)
+        for lane in [true, false] {
+            let stacked = bubbles.filter { $0.onLeft == lane }.sorted { $0.rect.minY < $1.rect.minY }
+            for (a, b) in zip(stacked, stacked.dropFirst()) {
+                #expect(a.rect.maxY <= b.rect.minY + 0.01)
+                // Higher holds get higher bubbles, so lines don't cross.
+                #expect(a.position.row >= b.position.row)
+            }
+        }
+    }
+
+    @Test func anOverflowingLaneSpillsToTheOtherSide() {
+        // Eight tall notes on the left can't all fit beside the board.
+        let names = ["A3", "B5", "C7", "D9", "E11", "A13", "B15", "C17"]
+        let bubbles = BetaBubbles.layout(names.map { note($0, height: 40) }, geometry: g)
+        #expect(bubbles.contains { !$0.onLeft })
+    }
+}

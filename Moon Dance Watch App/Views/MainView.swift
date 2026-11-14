@@ -58,13 +58,14 @@ struct MainView: View {
         case .findBoard: FindBoardView()
         case .export: ExportView()
         case .problemPreview(let id): ProblemPreviewView(problemID: id)
-        case .problemBeta(let id): ProblemPreviewView(problemID: id, showingBeta: true)
+        case .holdBeta(let id, let holdSet, let position):
+            HoldBetaEditor(problemID: id, holdSet: holdSet, position: position)
         case .logEditor(let id, let holdSet, let day): LogEditorView(problemID: id, holdSet: holdSet, day: day)
         }
     }
 
     /// DEBUG launch arguments for screenshots:
-    /// `-openScreen list|grade|log|settings|find|export|preview|editor|beta`, `-demoStoreError YES`, `-startClimbing YES`, `-demoBeta "E9=heel hook"`, `-page history|settings`,
+    /// `-openScreen list|grade|log|settings|find|export|preview|editor|holdBeta`, `-demoStoreError YES`, `-startClimbing YES`, `-demoBeta "E9=heel hook"`, `-page history|settings`,
     /// `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent`, `-demoLogs YES`.
     private func applyDebugLaunchArguments() {
         #if DEBUG
@@ -122,8 +123,12 @@ struct MainView: View {
         case "export": router.push(.export)
         case "preview":
             if let id = session.current?.problemId { router.push(.problemPreview(id)) }
-        case "beta":
-            if let id = session.current?.problemId { router.push(.problemBeta(id)) }
+        case "holdBeta":
+            // The editor for the hold named by -betaHold (E9 by default).
+            if let problem = session.current {
+                router.push(.holdBeta(problemID: problem.problemId, holdSet: problem.holdSet,
+                                      position: RuntimeEnvironment.debugValue("betaHold") ?? "E9"))
+            }
         case "editor":
             if let problem = session.current {
                 router.push(.logEditor(problemID: problem.problemId, holdSet: problem.holdSet, day: .now))

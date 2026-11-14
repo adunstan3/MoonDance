@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 /// The callout beside a tapped hold: its coordinates, its beta (or "No beta yet")
@@ -43,56 +44,60 @@ struct HoldCallout: View {
     }
 }
 
-/// Writes one hold's beta. Saving blank text removes it.
+/// Writes one hold's beta, saving as you go (blank text removes it). The back
+/// button returns to the hold pictures. Opened on a hold with no beta, the red
+/// button is Cancel (throws away anything written); otherwise it's Remove.
 struct HoldBetaEditor: View {
-    let name: String
-    let initial: String
-    let onSave: (String) -> Void
+    let problemID: String
+    let holdSet: String
+    let position: String
 
-    @Environment(\.dismiss) private var dismiss
-    @State private var draft: String
-
-    init(name: String, initial: String, onSave: @escaping (String) -> Void) {
-        self.name = name
-        self.initial = initial
-        self.onSave = onSave
-        _draft = State(initialValue: initial)
-    }
+    @Environment(\.modelContext) private var context
+    @Environment(Router.self) private var router
+    @State private var draft = ""
+    /// The hold had no beta when this opened.
+    @State private var isNew = true
+    @State private var loaded = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("\(name) beta")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 10) {
                 TextField("Heel hook, match, cross…", text: $draft, axis: .vertical)
                     .lineLimit(2...6)
                     .autocorrectionDisabled()
                     .accessibilityIdentifier("holdBetaField")
-                Button {
-                    onSave(draft)
-                    dismiss()
+                    .onChange(of: draft) { save() }
+                Button(role: .destructive) {
+                    draft = ""
+                    save()
+                    router.pop()
                 } label: {
-                    Label("Save", systemImage: "checkmark")
+                    Text(isNew ? "Cancel" : "Remove")
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 36)
-                        .background(Theme.blue, in: Capsule())
-                        .foregroundStyle(.white)
+                        .background(Theme.red.opacity(0.2), in: Capsule())
+                        .foregroundStyle(Theme.red)
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("saveHoldBeta")
-                if !initial.isEmpty {
-                    Button(role: .destructive) {
-                        onSave("")
-                        dismiss()
-                    } label: {
-                        Label("Remove", systemImage: "trash")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Theme.red)
-                            .frame(maxWidth: .infinity, minHeight: 30)
-                    }
-                    .buttonStyle(.plain)
-                }
+                .accessibilityIdentifier(isNew ? "cancelHoldBeta" : "removeHoldBeta")
             }
         }
+        .navigationTitle("\(position) beta")
+        .onAppear {
+            guard !loaded else { return }
+            loaded = true
+            let existing = Logbook.beta(problemId: problemID, holdSet: holdSet, in: context)[position]
+            isNew = existing == nil
+            draft = existing ?? ""
+        }
+        .onDisappear(perform: save)
+    }
+
+    private func save() {
+        guard loaded else { return }
+        let current = Logbook.beta(problemId: problemID, holdSet: holdSet, in: context)[position] ?? ""
+        let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != current else { return }
+        Logbook.setBeta(draft, problemId: problemID, holdSet: holdSet, position: position, in: context)
     }
 }
