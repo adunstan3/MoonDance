@@ -414,7 +414,8 @@ struct ProblemPreviewView: View {
             context.stroke(dot, with: .color(Theme.background), lineWidth: 1)
         }
         guard showAll else { return }
-        // Bubbles and lines stay below the column letters, clear of Back and the clock.
+        // Bubbles and lines are hidden above the column letters, clear of Back and
+        // the clock (they keep their place and scroll under the header).
         var context = context
         context.clip(to: Path(CGRect(x: 0, y: g.contentTop, width: g.size.width, height: g.size.height)))
 

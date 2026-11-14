@@ -99,7 +99,7 @@ holds) and 2024 (sets D, E and F and the wooden holds).
 - **Show beta** (on the clock's line, next to Back; gray when there's none) — every
   note in a bubble to the left or right of the board, level with its hold and joined
   to it by a line. Bubbles never overlap and their lines don't cross; pan sideways to
-  read them. Zoomed in, they stay below the column letters. **Hide beta** puts them away.
+  read them. Zoomed in, they move with the board and disappear under the header. **Hide beta** puts them away.
 - **‹ Back** (top left, on the clock's line) — back to Session.
 
 <br clear="right">
