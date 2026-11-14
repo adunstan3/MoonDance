@@ -154,7 +154,8 @@ private struct SessionProblemView: View {
         // included, is in the column on the right. A two-line name pushes both down
         // and the column tightens up.
         return HStack(alignment: .top, spacing: 10) {
-            HoldGridView(holds: problem.holds, holdSet: problem.holdSet, highPoint: highPoints.first?.position)
+            HoldGridView(holds: problem.holds, holdSet: problem.holdSet, highPoint: highPoints.first?.position,
+                         betaPositions: Set(betaNotes.map(\.position)))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .contentShape(Rectangle())
                 .onTapGesture { router.push(.problemPreview(problem.problemId)) }
@@ -166,7 +167,7 @@ private struct SessionProblemView: View {
                        hasBeta: !betaNotes.isEmpty,
                        onAttempt: model.logAttempt, onSent: model.markSent, onUnsend: model.unsend,
                        onStar: model.toggleProject,
-                       onBeta: { router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet)) })
+                       onBeta: { router.push(.problemBeta(problem.problemId)) })
                 .frame(width: SideColumn.width)
         }
         .padding(.top, 8)
@@ -276,7 +277,7 @@ private struct SideColumn: View {
                 .accessibilityLabel(isProject ? "Project. Tap to unmark" : "Mark as a project")
                 .accessibilityIdentifier("projectToggle")
             toggleRow(icon: "pencil", text: "Beta", on: hasBeta, action: onBeta)
-                .accessibilityLabel(hasBeta ? "Beta notes. Tap to read" : "Add beta notes")
+                .accessibilityLabel(hasBeta ? "Beta. Shows it on the hold pictures" : "Beta. Tap a hold in the hold pictures to add some")
                 .accessibilityIdentifier("betaButton")
             Spacer(minLength: 0)
             LightControls(problem: problem)

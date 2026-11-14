@@ -4,9 +4,9 @@ import SwiftData
 import UniformTypeIdentifiers
 
 /// The logbook as CSV, a complete backup: one row per attempt, send, project
-/// star, high point marked and beta note. Columns: date, time, hold set, problem
+/// star, high point marked and hold beta. Columns: date, time, hold set, problem
 /// id, problem name, grade, type (attempt, send, star, high_point, beta), hold (the
-/// high point's position) and note (the beta text).
+/// high point's or beta's position) and note (the beta text).
 nonisolated enum CSVExport {
     static let filename = "moondance-log.csv"
     static let header = "date,time,hold_set,problem_id,problem,grade,type,hold,note"
@@ -113,7 +113,7 @@ extension LogExport {
             + stars.map { row($0.dateAdded, $0.holdSet, $0.problemId, .star) }
             + marks.map { row($0.date, $0.holdSet, $0.problemId, .highPoint, hold: $0.position) }
             + unmarked.map { row($0.date, $0.holdSet, $0.problemId, .highPoint, hold: $0.position) }
-            + notes.map { row($0.updated, $0.holdSet, $0.problemId, .beta, note: $0.text) }
+            + notes.map { row($0.updated, $0.holdSet, $0.problemId, .beta, hold: $0.position, note: $0.text) }
         return LogExport(csv: CSVExport.csv(rows: rows), entryCount: entries.count, starCount: stars.count,
                          highPointCount: marks.count + unmarked.count, betaCount: notes.count)
     }

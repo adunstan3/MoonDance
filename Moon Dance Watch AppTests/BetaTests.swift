@@ -13,23 +13,27 @@ struct BetaTests {
         context = container.mainContext
     }
 
-    private func note() -> BetaNote? { Logbook.beta(problemId: "p1", holdSet: "2024", in: context) }
-
-    @Test func saveEditAndClear() throws {
-        #expect(note() == nil)
-        Logbook.setBeta("  Heel hook the start  ", problemId: "p1", holdSet: "2024", in: context)
-        #expect(note()?.text == "Heel hook the start")
-        Logbook.setBeta("Toe hook instead", problemId: "p1", holdSet: "2024", in: context)
-        #expect(note()?.text == "Toe hook instead")
-        #expect(try context.fetchCount(FetchDescriptor<BetaNote>()) == 1)
-        // Blank text removes it.
-        Logbook.setBeta("   ", problemId: "p1", holdSet: "2024", in: context)
-        #expect(note() == nil)
+    private func beta(_ holdSet: String = "2024") -> [String: String] {
+        Logbook.beta(problemId: "p1", holdSet: holdSet, in: context)
     }
 
-    @Test func notesAreSeparatePerHoldSet() {
-        Logbook.setBeta("2024 beta", problemId: "p1", holdSet: "2024", in: context)
-        #expect(Logbook.beta(problemId: "p1", holdSet: "2016", in: context) == nil)
+    @Test func betaIsPinnedToHolds() throws {
+        #expect(beta().isEmpty)
+        Logbook.setBeta("  heel hook  ", problemId: "p1", holdSet: "2024", position: "E9", in: context)
+        Logbook.setBeta("match", problemId: "p1", holdSet: "2024", position: "G13", in: context)
+        #expect(beta() == ["E9": "heel hook", "G13": "match"])
+        // Editing a hold's beta replaces it.
+        Logbook.setBeta("toe hook", problemId: "p1", holdSet: "2024", position: "E9", in: context)
+        #expect(beta()["E9"] == "toe hook")
+        #expect(try context.fetchCount(FetchDescriptor<BetaNote>()) == 2)
+        // Blank text removes just that hold's beta.
+        Logbook.setBeta("  ", problemId: "p1", holdSet: "2024", position: "E9", in: context)
+        #expect(beta() == ["G13": "match"])
+    }
+
+    @Test func betaIsSeparatePerHoldSet() {
+        Logbook.setBeta("2024 beta", problemId: "p1", holdSet: "2024", position: "E9", in: context)
+        #expect(beta("2016").isEmpty)
     }
 }
 

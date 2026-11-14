@@ -58,13 +58,13 @@ struct MainView: View {
         case .findBoard: FindBoardView()
         case .export: ExportView()
         case .problemPreview(let id): ProblemPreviewView(problemID: id)
-        case .beta(let id, let holdSet): BetaView(problemID: id, holdSet: holdSet)
+        case .problemBeta(let id): ProblemPreviewView(problemID: id, showingBeta: true)
         case .logEditor(let id, let holdSet, let day): LogEditorView(problemID: id, holdSet: holdSet, day: day)
         }
     }
 
     /// DEBUG launch arguments for screenshots:
-    /// `-openScreen list|grade|log|settings|find|export|preview|editor|beta`, `-demoStoreError YES`, `-startClimbing YES`, `-demoBeta "text"`, `-page history|settings`,
+    /// `-openScreen list|grade|log|settings|find|export|preview|editor|beta`, `-demoStoreError YES`, `-startClimbing YES`, `-demoBeta "E9=heel hook"`, `-page history|settings`,
     /// `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent`, `-demoLogs YES`.
     private func applyDebugLaunchArguments() {
         #if DEBUG
@@ -88,8 +88,13 @@ struct MainView: View {
             model.board.debugSetStatus(.connecting)
         default: break
         }
-        if let text = RuntimeEnvironment.debugValue("demoBeta"), let problem = session.current {
-            Logbook.setBeta(text, problemId: problem.problemId, holdSet: problem.holdSet, in: context)
+        // -demoBeta "E9=heel hook" pins beta to a hold of the current problem.
+        if let value = RuntimeEnvironment.debugValue("demoBeta"), let problem = session.current {
+            let parts = value.split(separator: "=", maxSplits: 1).map(String.init)
+            if parts.count == 2 {
+                Logbook.setBeta(parts[1], problemId: problem.problemId, holdSet: problem.holdSet, position: parts[0],
+                                in: context)
+            }
         }
         if RuntimeEnvironment.debugValue("startClimbing") != nil {
             Task { await model.climbing.start() }
@@ -118,7 +123,7 @@ struct MainView: View {
         case "preview":
             if let id = session.current?.problemId { router.push(.problemPreview(id)) }
         case "beta":
-            if let problem = session.current { router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet)) }
+            if let id = session.current?.problemId { router.push(.problemBeta(id)) }
         case "editor":
             if let problem = session.current {
                 router.push(.logEditor(problemID: problem.problemId, holdSet: problem.holdSet, day: .now))

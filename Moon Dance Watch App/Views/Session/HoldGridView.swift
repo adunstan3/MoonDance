@@ -10,6 +10,8 @@ struct HoldGridView: View {
     var holdSet: String?
     /// Your high point ("G13"): a bigger gold dot inside its ring.
     var highPoint: String?
+    /// Holds with beta: a small white dot at the top right of the ring.
+    var betaPositions: Set<String> = []
 
     var body: some View {
         let bolted = holdSet.flatMap { HoldImages.shared.info(for: $0) }.map { Set($0.positions) }
@@ -37,6 +39,12 @@ struct HoldGridView: View {
                 let center = layout.center(column: position.column, row: position.row)
                 let rect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
                 context.stroke(Path(ellipseIn: rect), with: .color(Theme.color(for: hold.role)), lineWidth: line)
+                if betaPositions.contains(hold.position) {
+                    let r = max(1.5, layout.cell * 0.14)
+                    let mark = CGPoint(x: center.x + radius * 0.75, y: center.y - radius * 0.75)
+                    context.fill(Path(ellipseIn: CGRect(x: mark.x - r, y: mark.y - r, width: r * 2, height: r * 2)),
+                                 with: .color(Theme.white))
+                }
             }
         }
         .accessibilityElement()

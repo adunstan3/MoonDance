@@ -105,17 +105,21 @@ final class HighPointMark {
     }
 }
 
-/// Your beta for a problem: free-text notes, one per problem and hold set.
+/// Your beta pinned to one hold of a problem ("heel hook"): one per problem,
+/// hold set and position, written from the hold pictures.
 @Model
 final class BetaNote {
     var problemId: String
     var holdSet: String
+    /// Grid position, e.g. "E9".
+    var position: String = ""
     var text: String
     var updated: Date
 
-    init(problemId: String, holdSet: String, text: String, updated: Date = .now) {
+    init(problemId: String, holdSet: String, position: String, text: String, updated: Date = .now) {
         self.problemId = problemId
         self.holdSet = holdSet
+        self.position = position
         self.text = text
         self.updated = updated
     }

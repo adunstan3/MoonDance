@@ -140,17 +140,23 @@ enum Logbook {
 
     // MARK: - Beta
 
-    static func beta(problemId: String, holdSet: String, in context: ModelContext) -> BetaNote? {
-        var descriptor = FetchDescriptor<BetaNote>(predicate: #Predicate { $0.problemId == problemId && $0.holdSet == holdSet })
-        descriptor.fetchLimit = 1
-        return try? context.fetch(descriptor).first
+    /// A problem's beta by hold ("E9" → "heel hook").
+    static func beta(problemId: String, holdSet: String, in context: ModelContext) -> [String: String] {
+        let descriptor = FetchDescriptor<BetaNote>(predicate: #Predicate { $0.problemId == problemId && $0.holdSet == holdSet })
+        var result: [String: String] = [:]
+        for note in (try? context.fetch(descriptor)) ?? [] where !note.position.isEmpty {
+            result[note.position] = note.text
+        }
+        return result
     }
 
-    /// Saves a problem's beta; blank text removes it.
-    static func setBeta(_ text: String, problemId: String, holdSet: String, in context: ModelContext,
+    /// Saves one hold's beta; blank text removes it.
+    static func setBeta(_ text: String, problemId: String, holdSet: String, position: String, in context: ModelContext,
                         at date: Date = .now) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let descriptor = FetchDescriptor<BetaNote>(predicate: #Predicate { $0.problemId == problemId && $0.holdSet == holdSet })
+        let descriptor = FetchDescriptor<BetaNote>(predicate: #Predicate {
+            $0.problemId == problemId && $0.holdSet == holdSet && $0.position == position
+        })
         let existing = (try? context.fetch(descriptor)) ?? []
         if trimmed.isEmpty {
             existing.forEach(context.delete)
@@ -159,7 +165,8 @@ enum Logbook {
             note.updated = date
             existing.dropFirst().forEach(context.delete)
         } else {
-            context.insert(BetaNote(problemId: problemId, holdSet: holdSet, text: trimmed, updated: date))
+            context.insert(BetaNote(problemId: problemId, holdSet: holdSet, position: position, text: trimmed,
+                                    updated: date))
         }
         save(context)
     }

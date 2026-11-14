@@ -11,8 +11,8 @@ enum Route: Hashable {
     case export
     /// Full-screen hold pictures for a problem (by problem id).
     case problemPreview(String)
-    /// Your beta (notes) for a problem: view, or edit if there are none yet.
-    case beta(problemID: String, holdSet: String)
+    /// Hold pictures with every hold's beta showing (Beta on Session).
+    case problemBeta(String)
     /// Edit one problem's attempts and sends on one day (from History).
     case logEditor(problemID: String, holdSet: String, day: Date)
 }

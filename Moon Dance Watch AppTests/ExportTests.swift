@@ -59,7 +59,7 @@ struct LogExportTests {
         let later = Date(timeIntervalSince1970: 600)
         context.insert(HighPointMark(problemId: "gone", holdSet: "2016", position: "H15", date: later))
         context.insert(HighPoint(problemId: "gone", holdSet: "2016", position: "H15", date: later))
-        context.insert(BetaNote(problemId: "p1", holdSet: "2024", text: "Heel hook, then \"jump\"",
+        context.insert(BetaNote(problemId: "p1", holdSet: "2024", position: "E9", text: "Heel hook, then \"jump\"",
                                 updated: Date(timeIntervalSince1970: 700)))
         try context.save()
 
@@ -77,6 +77,6 @@ struct LogExportTests {
         #expect(lines[4].hasSuffix(",2024,p1,\"Crimp, Theory\",V5 6C+,star,,"))
         #expect(lines[5].hasSuffix(",high_point,G13,"))
         #expect(lines[6].hasSuffix(",2016,gone,,,high_point,H15,"))
-        #expect(lines[7].hasSuffix(",beta,,\"Heel hook, then \"\"jump\"\"\""))
+        #expect(lines[7].hasSuffix(",beta,E9,\"Heel hook, then \"\"jump\"\"\""))
     }
 }

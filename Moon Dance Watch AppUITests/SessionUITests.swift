@@ -141,14 +141,25 @@ final class SessionUITests: XCTestCase {
         wait(for: [reset], timeout: 5)
     }
 
-    /// Beta with no notes yet opens straight into the editor.
+    /// Beta on Session opens the hold pictures; tapping a hold opens its callout,
+    /// whose pen opens the editor. Tapping an empty grid point shows nothing. The
+    /// first problem under -uiTesting has a hand hold on E9.
     @MainActor
-    func testBetaWithNoNotesOpensTheEditor() throws {
+    func testBetaIsWrittenOnAHold() throws {
         let app = launchToSession()
         let beta = app.descendants(matching: .any)["betaButton"].firstMatch
         XCTAssertTrue(beta.waitForExistence(timeout: 5))
         beta.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["betaField"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["saveBeta"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["problemPreview"].firstMatch.waitForExistence(timeout: 10))
+
+        let callout = app.descendants(matching: .any)["holdCallout"].firstMatch
+        previewPoint(app, column: 0, row: 1).tap()
+        XCTAssertFalse(callout.waitForExistence(timeout: 1))
+        sleep(1)
+        previewPoint(app, column: 4, row: 9).tap()
+        XCTAssertTrue(callout.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["E9"].exists)
+        app.buttons["editHoldBeta"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["holdBetaField"].firstMatch.waitForExistence(timeout: 5))
     }
 }

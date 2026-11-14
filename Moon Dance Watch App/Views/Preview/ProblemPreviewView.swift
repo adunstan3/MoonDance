@@ -13,14 +13,18 @@ import SwiftUI
 /// problem, so it replaces the last). Long-pressing the finish logs a send; start
 /// holds can't be a high point.
 ///
-/// Tap a hold (or any bolt) to flash its coordinates, such as "G13", above it.
-/// "Beta" beside Back shows your notes over the board (or, with none yet, opens
-/// the editor).
+/// Beta lives on the holds. Tap one of the problem's holds for a callout with its
+/// coordinates and its beta, and a pen to write or change it (empty grid points do
+/// nothing). Holds with beta get a small white mark. The pen circle beside Back
+/// shows every note at once, next to its hold.
 struct ProblemPreviewView: View {
     let problemID: String
+    /// Open with every note showing (Beta on Session).
+    let showingBeta: Bool
 
-    init(problemID: String) {
+    init(problemID: String, showingBeta: Bool = false) {
         self.problemID = problemID
+        self.showingBeta = showingBeta
         _betaNotes = Query(filter: #Predicate<BetaNote> { $0.problemId == problemID })
     }
 
@@ -28,14 +32,19 @@ struct ProblemPreviewView: View {
     /// How far a finger can drift before a touch becomes a pan, in points.
     static let moveSlop: CGFloat = 6
     static let doubleTapInterval: TimeInterval = 0.35
+    /// Callout width, in points.
+    static let calloutWidth: CGFloat = 150
 
     @Environment(\.modelContext) private var context
     @Environment(Router.self) private var router
     @Environment(AppModel.self) private var model
     @Query private var highPoints: [HighPoint]
     @Query private var betaNotes: [BetaNote]
-    @State private var flash: Flash?
-    @State private var showBeta = false
+    @State private var selected: GridPosition?
+    @State private var showAllBeta = false
+    @State private var editing: EditTarget?
+    /// The open callout's height, measured, so it can sit just above its hold.
+    @State private var calloutHeight: CGFloat = 70
     @State private var problem: Problem?
     @State private var zoom = 1.0
     @State private var centre = PreviewGeometry.boardCentre
@@ -55,10 +64,10 @@ struct ProblemPreviewView: View {
         var longPressed = false
     }
 
-    /// A hold's coordinates, shown above it for a moment after a tap.
-    struct Flash: Equatable {
-        let id = UUID()
+    /// The hold whose beta is being written.
+    struct EditTarget: Identifiable {
         let position: GridPosition
+        var id: String { position.name }
     }
 
     /// A short note after a long press ("High point G13", "Sent", …).
@@ -67,8 +76,14 @@ struct ProblemPreviewView: View {
         let text: String
     }
 
-    private var betaNote: BetaNote? {
-        betaNotes.first { $0.holdSet == problem?.holdSet }
+    /// This problem's beta, by hold ("E9" → "heel hook").
+    private var beta: [String: String] {
+        guard let problem else { return [:] }
+        var result: [String: String] = [:]
+        for note in betaNotes where note.holdSet == problem.holdSet && !note.position.isEmpty {
+            result[note.position] = note.text
+        }
+        return result
     }
 
     private var highPoint: String? {
@@ -80,25 +95,32 @@ struct ProblemPreviewView: View {
         // One size (the whole screen) for drawing, panning and zoom limits.
         GeometryReader { proxy in
             let size = proxy.size
+            let beta = beta
             Canvas { context, canvasSize in
                 guard let problem else { return }
                 let geometry = PreviewGeometry(size: canvasSize, zoom: zoom, centre: centre)
-                Self.draw(problem, highPoint: highPoint, flash: flash?.position, geometry: geometry, in: &context)
+                Self.draw(problem, highPoint: highPoint, beta: beta, showAllBeta: showAllBeta,
+                          selected: selected, geometry: geometry, in: &context)
             }
             .contentShape(Rectangle())
             .gesture(touches(size: size))
-            .onChange(of: zoom) { centre = PreviewGeometry(size: size, zoom: zoom, centre: centre).centre }
             .accessibilityElement()
             .accessibilityIdentifier("problemPreview")
             .accessibilityLabel(problem.map { "Hold pictures for \($0.name)" } ?? "Problem preview")
             .accessibilityValue("Zoom \(Int((zoom * 100).rounded())) percent")
             .accessibilityHint("Turn the Digital Crown to zoom, drag to look around, double-tap to reset, "
-                + "long-press a hold to mark your high point")
+                + "tap a hold for its beta, long-press a hold to mark your high point")
+            // An overlay, so the callout never changes the board's layout.
+            .overlay(alignment: .topLeading) {
+                if let selected {
+                    callout(for: selected, text: beta[selected.name], size: size)
+                }
+            }
+            .onChange(of: zoom) { centre = PreviewGeometry(size: size, zoom: zoom, centre: centre).centre }
         }
         .background(Theme.background)
         .ignoresSafeArea()
         .overlay(alignment: .topLeading) { topBar }
-        .overlay(alignment: .bottom) { betaPanel }
         .overlay(alignment: .bottom) { messageView }
         .toolbar(.hidden, for: .navigationBar)
         .focusable()
@@ -107,14 +129,25 @@ struct ProblemPreviewView: View {
         .digitalCrownRotation($zoom, from: PreviewGeometry.zoomRange.lowerBound,
                               through: PreviewGeometry.zoomRange.upperBound,
                               sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: false)
+        .sheet(item: $editing) { target in
+            HoldBetaEditor(name: target.position.name, initial: beta[target.position.name] ?? "") { text in
+                guard let problem else { return }
+                Logbook.setBeta(text, problemId: problem.problemId, holdSet: problem.holdSet,
+                                position: target.position.name, in: context)
+            }
+        }
         .onAppear {
             problem = SessionModel.problem(id: problemID, context: context)
             crownFocused = true
-            // Screenshots: -previewFlash G13 shows a coordinate; -previewBeta YES opens the notes.
-            if let name = RuntimeEnvironment.debugValue("previewFlash"), let position = GridPosition(name) {
-                flash = Flash(position: position)
+            if showingBeta {
+                showAllBeta = true
+                if beta.isEmpty { show("Tap a hold to add beta") }
             }
-            if RuntimeEnvironment.debugValue("previewBeta") != nil { showBeta = true }
+            // Screenshots: -previewSelect E9 opens a hold's callout; -previewBeta YES shows every note.
+            if let name = RuntimeEnvironment.debugValue("previewSelect"), let position = GridPosition(name) {
+                selected = position
+            }
+            if RuntimeEnvironment.debugValue("previewBeta") != nil { showAllBeta = true }
             // Screenshots: -previewZoom 3 -previewCentre 6,10 (board units).
             if let value = RuntimeEnvironment.debugValue("previewZoom"), let debugZoom = Double(value) {
                 zoom = debugZoom
@@ -124,87 +157,55 @@ struct ProblemPreviewView: View {
         }
     }
 
-    /// Back and Beta, small, on the clock's line.
+    /// The tapped hold's coordinates and beta, beside it: above if there's room,
+    /// otherwise below, kept on screen. The pen writes or changes the beta.
+    private func callout(for position: GridPosition, text: String?, size: CGSize) -> some View {
+        let g = PreviewGeometry(size: size, zoom: zoom, centre: centre)
+        let hold = g.screenPoint(column: position.column, row: position.row)
+        let gap = max(g.scale * 0.65, 9)
+        let above = hold.y - gap - calloutHeight > PreviewGeometry.topInset
+        let left = min(max(hold.x - Self.calloutWidth / 2, 4), size.width - Self.calloutWidth - 4)
+        return HoldCallout(name: position.name, text: text) {
+            editing = EditTarget(position: position)
+        }
+        .frame(width: Self.calloutWidth)
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { calloutHeight = $0 }
+        .offset(x: left, y: above ? hold.y - gap - calloutHeight : hold.y + gap)
+        .transition(.opacity)
+    }
+
+    /// Back and the beta pen, small, on the clock's line.
     private var topBar: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 4) {
             backButton
-            betaButton
+            betaToggle
         }
         .padding(.top, SessionView.Header.top)
         .padding(.leading, SessionView.Header.leading - 4)
         .ignoresSafeArea()
     }
 
-    /// Shows or hides your notes over the board; with no notes yet, opens the editor.
-    private var betaButton: some View {
+    /// A small pen circle: shows or hides every note next to its hold.
+    private var betaToggle: some View {
         Button {
-            if betaNote == nil {
-                if let problem { router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet)) }
+            if beta.isEmpty {
+                show("Tap a hold to add beta")
             } else {
-                withAnimation(.snappy) { showBeta.toggle() }
+                withAnimation(.snappy) { showAllBeta.toggle() }
             }
         } label: {
-            HStack(spacing: 2) {
-                Image(systemName: "pencil")
-                Text("Beta")
-            }
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(betaNote == nil ? Theme.secondaryText : (showBeta ? Theme.blue : Theme.white))
-            .frame(minHeight: SessionView.Header.height)
-            .padding(.horizontal, 6)
-            .contentShape(Rectangle())
+            Image(systemName: "pencil")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(showAllBeta && !beta.isEmpty ? .white : (beta.isEmpty ? Theme.secondaryText : Theme.white))
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(showAllBeta && !beta.isEmpty ? Theme.blue : Theme.card))
+                .frame(minHeight: SessionView.Header.height)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(showAllBeta ? "Hide beta" : "Show beta")
         .accessibilityIdentifier("previewBeta")
-    }
-
-    /// Your notes over the bottom of the board (up to five lines; tap them for the
-    /// rest), with Edit and a close button.
-    @ViewBuilder
-    private var betaPanel: some View {
-        if showBeta, let note = betaNote, let problem {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(note.text)
-                    .font(.footnote)
-                    .foregroundStyle(Theme.white)
-                    .lineLimit(5)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet))
-                    }
-                    .accessibilityIdentifier("previewBetaText")
-                HStack {
-                    Button {
-                        router.push(.beta(problemID: problem.problemId, holdSet: problem.holdSet))
-                    } label: {
-                        Label("Edit", systemImage: "pencil")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Theme.blue)
-                    }
-                    .buttonStyle(.plain)
-                    Spacer()
-                    Button {
-                        withAnimation(.snappy) { showBeta = false }
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.footnote.weight(.bold))
-                            .foregroundStyle(Theme.secondaryText)
-                            .frame(width: 30, height: 24)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Hide beta")
-                }
-            }
-            .padding(10)
-            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.card.opacity(0.96)))
-            .padding(.horizontal, 10)
-            .padding(.bottom, 10)
-            .ignoresSafeArea(edges: .bottom)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-        }
     }
 
     /// Small text on the clock's line instead of the big round back button, so the
@@ -220,7 +221,7 @@ struct ProblemPreviewView: View {
             .font(.footnote.weight(.semibold))
             .foregroundStyle(Theme.blue)
             .frame(minHeight: SessionView.Header.height)
-            .padding(.trailing, 8)
+            .padding(.trailing, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -247,8 +248,8 @@ struct ProblemPreviewView: View {
 
     // MARK: - Touches
 
-    /// Pan, tap (double-tap resets the zoom) and long press in one gesture, because
-    /// SwiftUI's long press doesn't say where you pressed.
+    /// Pan, tap (a hold's callout; double-tap resets the zoom) and long press in one
+    /// gesture, because SwiftUI's long press doesn't say where you pressed.
     private func touches(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
@@ -282,30 +283,26 @@ struct ProblemPreviewView: View {
                 if let lastTap, Date.now.timeIntervalSince(lastTap) < Self.doubleTapInterval {
                     self.lastTap = nil
                     withAnimation(.snappy) {
+                        selected = nil
                         zoom = 1
                         centre = PreviewGeometry.boardCentre
                     }
                 } else {
                     lastTap = .now
-                    flashHold(at: ended.start, size: size)
+                    tap(at: ended.start, size: size)
                 }
             }
     }
 
-    /// Flashes the coordinates of the hold under a tap: a problem hold first, else
-    /// any bolt on the hold set.
-    private func flashHold(at point: CGPoint, size: CGSize) {
+    /// Opens the callout for the problem hold under a tap. Tapping the same hold
+    /// again, or anywhere that isn't one of the problem's holds, closes it.
+    private func tap(at point: CGPoint, size: CGSize) {
         guard let problem else { return }
         let geometry = PreviewGeometry(size: size, zoom: zoom, centre: centre)
         let holds = problem.holds.compactMap { GridPosition($0.position) }
-        let bolts = (HoldImages.shared.info(for: problem.holdSet)?.positions ?? []).compactMap { GridPosition($0) }
-        guard let position = geometry.position(at: point, among: holds) ?? geometry.position(at: point, among: bolts)
-        else { return }
-        let new = Flash(position: position)
-        flash = new
-        Task {
-            try? await Task.sleep(for: .seconds(1.5))
-            if flash?.id == new.id { flash = nil }
+        let position = geometry.position(at: point, among: holds)
+        withAnimation(.snappy(duration: 0.15)) {
+            selected = position == selected ? nil : position
         }
     }
 
@@ -336,8 +333,8 @@ struct ProblemPreviewView: View {
 
     // MARK: - Drawing
 
-    private static func draw(_ problem: Problem, highPoint: String?, flash: GridPosition?,
-                             geometry g: PreviewGeometry, in context: inout GraphicsContext) {
+    private static func draw(_ problem: Problem, highPoint: String?, beta: [String: String], showAllBeta: Bool,
+                             selected: GridPosition?, geometry g: PreviewGeometry, in context: inout GraphicsContext) {
         let images = HoldImages.shared
         let scale = g.scale
         let inProblem = Set(problem.holds.compactMap { GridPosition($0.position) })
@@ -390,29 +387,48 @@ struct ProblemPreviewView: View {
                            style: StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round))
         }
 
+        // The tapped hold gets a white ring.
+        if let selected {
+            let centre = g.screenPoint(column: selected.column, row: selected.row)
+            let r = max(scale * 0.62, 8)
+            context.stroke(Path(ellipseIn: CGRect(x: centre.x - r, y: centre.y - r, width: r * 2, height: r * 2)),
+                           with: .color(Theme.white), lineWidth: 1.5)
+        }
+        drawBeta(beta, showAll: showAllBeta, selected: selected, g, in: &context)
         drawLabels(g, in: &context)
-        if let flash { drawFlash(flash, g, in: &context) }
     }
 
-    /// The tapped hold's coordinates in a pill just above it (below it if that
-    /// would run under the clock), kept on screen.
-    private static func drawFlash(_ position: GridPosition, _ g: PreviewGeometry, in context: inout GraphicsContext) {
-        let hold = g.screenPoint(column: position.column, row: position.row)
-        let text = context.resolve(Text(position.name)
-            .font(.system(size: 16, weight: .bold, design: .rounded))
-            .foregroundStyle(Theme.white))
-        let size = text.measure(in: CGSize(width: 200, height: 60))
-        let width = size.width + 16
-        let height = size.height + 6
-        let gap = max(g.scale * 0.7, 10)
-        var y = hold.y - gap - height
-        if y < PreviewGeometry.topInset { y = hold.y + gap }
-        let x = min(max(hold.x - width / 2, 4), g.size.width - width - 4)
-        let pill = CGRect(x: x, y: y, width: width, height: height)
-        let shape = Path(roundedRect: pill, cornerRadius: height / 2)
-        context.fill(shape, with: .color(Color(white: 0.16)))
-        context.stroke(shape, with: .color(Theme.white), lineWidth: 1.5)
-        context.draw(text, at: CGPoint(x: pill.midX, y: pill.midY))
+    /// A small white mark at the top right of every hold with beta, and with
+    /// "show all" on, each note in a small pill beside its hold.
+    private static func drawBeta(_ beta: [String: String], showAll: Bool, selected: GridPosition?,
+                                 _ g: PreviewGeometry, in context: inout GraphicsContext) {
+        for (name, text) in beta.sorted(by: { $0.key < $1.key }) {
+            guard let position = GridPosition(name) else { continue }
+            let hold = g.screenPoint(column: position.column, row: position.row)
+            let r = max(g.scale * 0.16, 3)
+            let mark = CGPoint(x: hold.x + g.scale * 0.45, y: hold.y - g.scale * 0.45)
+            let dot = Path(ellipseIn: CGRect(x: mark.x - r, y: mark.y - r, width: r * 2, height: r * 2))
+            context.fill(dot, with: .color(Theme.white))
+            context.stroke(dot, with: .color(Theme.background), lineWidth: 1)
+
+            guard showAll, position != selected else { continue }
+            let label = context.resolve(Text(text)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Theme.white))
+            let maxWidth: CGFloat = 84
+            let size = label.measure(in: CGSize(width: maxWidth, height: 28))
+            let width = size.width + 10
+            let height = min(size.height, 28) + 4
+            let gap = max(g.scale * 0.6, 7)
+            // Right of the hold, or left if it would run off the screen.
+            var x = hold.x + gap
+            if x + width > g.size.width - 2 { x = hold.x - gap - width }
+            let pill = CGRect(x: x, y: hold.y - height / 2, width: width, height: height)
+            let shape = Path(roundedRect: pill, cornerRadius: 6)
+            context.fill(shape, with: .color(Color(white: 0.16).opacity(0.94)))
+            context.stroke(shape, with: .color(Theme.white.opacity(0.6)), lineWidth: 1)
+            context.draw(label, in: pill.insetBy(dx: 5, dy: 2))
+        }
     }
 
     /// A–K across the top and 1–18 down the left. When zoomed in they stay pinned
