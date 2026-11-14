@@ -60,9 +60,9 @@ The hold grid fills the left side in the board's LED colors: **green** start hol
 - **Grade** with a white **B** badge for benchmarks.
 - **Tries** — how many attempts you've logged on this problem (see below).
 - **Proj** — tap the star to make it a project. Projects are pinned to the top of the list.
-- **✎ Beta** — your notes on how to climb it. With none yet, it opens straight into
-  the editor (keyboard, Scribble or dictation). With notes, it shows them, with **Edit**.
-  Saving blank text removes them. The pen turns white once a problem has beta.
+- **✎ Beta** — opens the hold pictures with every hold's beta showing. Beta is
+  written on the holds there (see below). The pen turns white once a problem has
+  beta, and holds with beta get a small white dot on the grid.
 - **Light it** — sends the problem to the board.
 - **Tap the grid** for a full-screen look at the real holds (below).
 
@@ -90,10 +90,12 @@ holds) and 2024 (sets D, E and F and the wooden holds).
   hold's blue ring. A problem has one high point: marking another hold moves it, and
   long-pressing it again clears it. Start holds can't be a high point, and
   long-pressing the **finish** hold logs the problem as **sent**.
-- **Tap a hold** — its coordinates (such as **E9**) flash in a pill above it. This
-  works on any bolt, not just the problem's holds.
-- **✎ Beta** (on the clock's line, next to Back) — shows your notes over the bottom of
-  the board, with **Edit** and **×**. With no notes yet, it opens the editor.
+- **Tap a hold** — a callout opens beside it with its coordinates (such as **E9**),
+  your **beta** for that hold (or "No beta yet") and a small **pen** to write or change
+  it (keyboard, Scribble or dictation; **Remove** clears it). Tap the hold again or
+  anywhere else to close it. Holds with beta carry a small white mark.
+- **Pen circle** (on the clock's line, next to Back) — shows every hold's beta at once,
+  in small labels beside the holds.
 - **‹ Back** (top left, on the clock's line) — back to Session.
 
 <br clear="right">
@@ -210,7 +212,7 @@ and tap **Use this board**; it's saved, and later sessions connect to it automat
 
 Logs live only on the watch, so export them every few weeks. **Export logs** builds
 `moondance-log.csv`, a complete backup: every attempt, send, project star, high point
-marked and beta note on both hold sets, with the problem's id. It opens the watch share sheet, so you
+marked and hold beta on both hold sets, with the problem's id. It opens the watch share sheet, so you
 can send it by **Mail** or **Messages** over cellular.
 
 ```csv
@@ -219,7 +221,7 @@ date,time,hold_set,problem_id,problem,grade,type,hold,note
 2026-11-08,18:42:10,2024,4f0c…,Dunes,V5 6C,send,,
 2026-11-08,18:45:00,2024,9a1e…,Calliope,V5 6C+,star,,
 2026-11-08,18:50:12,2024,9a1e…,Calliope,V5 6C+,high_point,G13,
-2026-11-08,19:02:40,2024,9a1e…,Calliope,V5 6C+,beta,,"Heel hook the start, then bump"
+2026-11-08,19:02:40,2024,9a1e…,Calliope,V5 6C+,beta,E9,"Heel hook, then bump"
 ```
 
 <br clear="right">
@@ -298,7 +300,7 @@ swift tools/build_hold_images.swift
 - **Logs** (`LogEntry`: problem, hold set, time, attempt or send), **projects**
   (`Project`: starred problems), **high points** (`HighPoint`: the current hold per
   problem, and `HighPointMark`: every marking, for History) and **beta**
-  (`BetaNote`: your notes per problem) — kept separately and keyed by the problem's
+  (`BetaNote`: a note pinned to one hold) — kept separately and keyed by the problem's
   id, so they survive a new snapshot.
 - **Settings** (UserDefaults) — hold set, grade scale, saved board, last grade picked,
   Benchmarks only, last export date.
@@ -330,11 +332,11 @@ Every script waits for a lock shared with my other watch apps (`~/Library/Caches
 build or test runs on the Mac at a time. A script that prints "Waiting for the shared build lock" is queued, not stuck.
 
 Debug builds accept launch arguments for screenshots, e.g. `-openScreen list|grade|log|settings|find|export|preview|editor|beta`
-(with `-previewFlash G13` and `-previewBeta YES` in the preview)
+(with `-previewSelect E9` and `-previewBeta YES` in the preview)
 (with `-previewZoom 3 -previewCentre 7,9` for a zoomed preview),
 `-page history|settings`, `-demoBoard lit|failed|connecting`, `-demoBanner attempt|sent|unsend`
 `-demoLogs YES`, `-demoHighPoint YES`, `-demoStoreError YES` (the store error screen) and
-`-startClimbing YES`, `-demoBeta "text"`. `-uiTesting` starts with an empty in-memory store.
+`-startClimbing YES`, `-demoBeta "E9=heel hook"`. `-uiTesting` starts with an empty in-memory store.
 
 ### Releasing through TestFlight
 
@@ -370,8 +372,8 @@ Both targets keep `ITSAppUsesNonExemptEncryption = NO` and are signed with the p
 - **8 UI tests** (XCTest): Digital Crown stepping on launch, after opening the list,
   after swiping between pages and after the hold-picture preview (which the Crown
   zooms), that a small nudge doesn't skip a problem, long-pressing holds in the
-  preview (high point, start hold refused) plus double-tap to reset the zoom, Beta
-  opening the editor when there are no notes, and starting a climbing session after
+  preview (high point, start hold refused) plus double-tap to reset the zoom, writing
+  beta on a hold (and an empty grid point showing nothing), and starting a climbing session after
   the Health prompt.
 
 ## Project layout

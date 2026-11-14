@@ -80,9 +80,9 @@ Button or use its long press, and the attempt/sent shortcuts were removed.)
     wrist for a few minutes, then raise it: Moondance should be on screen, not
     the clock. **End climbing session** stops it; a workout icon in the status bar
     should disappear.
-16. In the hold pictures, tap holds to see their coordinates, and add beta with
-    ✎ Beta (try dictation and Scribble). Check it shows over the board and on
-    Session's Beta.
+16. In the hold pictures, tap a hold and use the pen to add beta (try dictation
+    and Scribble). Check the keyboard no longer offers suggestions like "Doing
+    good". Check the white marks and the pen circle's labels are readable.
 17. Hold **Sent** on a sent problem: only the latest send should turn back into an
     attempt. In History, swipe a row left › **Edit** and fix an entry.
 18. Export logs and check the CSV now has problem_id, star, high_point and beta

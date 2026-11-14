@@ -8,7 +8,7 @@ Moondance is a standalone Apple Watch Ultra app that lights up MoonBoard problem
 
 - **Device:** Apple Watch Ultra (1st gen), watchOS 26.6, built with Claude Code and Xcode on the Mac.
 - **No phone or internet needed:** the watch talks to the board's LED box directly over Bluetooth, and all problems ship inside the app.
-- **v1 scope:** light up problems, switch hold sets, log attempts and sends, mark projects, export logs. Added since: hold pictures with a high point and tap-for-coordinates, beta notes, log editing, a random problem, and a climbing session that keeps the app on screen.
+- **v1 scope:** light up problems, switch hold sets, log attempts and sends, mark projects, export logs. Added since: hold pictures with a high point, beta pinned to holds, log editing, a random problem, and a climbing session that keeps the app on screen.
 - **Personal use only:** the bundled problems are MoonBoard's content, so the app is installed through the paid developer account and never published.
 
 ## Board and Bluetooth
@@ -43,14 +43,13 @@ The app ships a JSON snapshot of problems for both hold sets, loaded on first la
 
 The app opens on a Session screen built for standing at the wall: the hold grid fills the left side, and the Digital Crown steps through problems without going back to a list. History and Settings are a swipe left.
 
-1. **Session (home):** the hold grid in MoonBoard's colors (green start, blue hand, red finish; dots only where the hold set has a hold) on the left. The problem name sits top left on the clock's line; tapping it opens the Problem list. The side column has the grade with a B badge, the tries count (tap: +1 attempt; touch and hold: Sent, or on a sent problem, Unsend), the project star ("Proj"), a pen ("Beta") for your notes, and Light it at the bottom. Turning the Crown moves to the next or previous problem in the list. Tapping the grid opens Hold pictures.
-2. **Hold pictures:** the problem drawn with pictures of the real holds, start and finish outlined, A–K and 1–18 around the edge. The Crown zooms, drag pans, and double-tap resets. Tapping a hold (or any bolt) flashes its coordinates above it. Long-pressing a hand hold marks it as your high point (gold; one per problem); long-pressing the finish logs a send. "Beta" beside Back shows your notes over the bottom of the board with Edit, or opens the editor if there are none.
+1. **Session (home):** the hold grid in MoonBoard's colors (green start, blue hand, red finish; dots only where the hold set has a hold) on the left. The problem name sits top left on the clock's line; tapping it opens the Problem list. The side column has the grade with a B badge, the tries count (tap: +1 attempt; touch and hold: Sent, or on a sent problem, Unsend), the project star ("Proj"), a pen ("Beta") that opens the hold pictures with every hold's beta showing, and Light it at the bottom. Turning the Crown moves to the next or previous problem in the list. Tapping the grid opens Hold pictures.
+2. **Hold pictures:** the problem drawn with pictures of the real holds, start and finish outlined, A–K and 1–18 around the edge. The Crown zooms, drag pans, and double-tap resets. Tapping one of the problem's holds opens a callout beside it: its coordinates, your beta for that hold, and a pen to write or change it (empty grid points do nothing). Holds with beta carry a small white mark here and on Session's grid; a pen circle beside Back shows every note at once beside its hold. Long-pressing a hand hold marks it as your high point (gold; one per problem); long-pressing the finish logs a send.
 3. **Problem list:** a list for the current hold set and grade. The header has a hold set chip (opens Settings), a grade chip (opens the grade picker) and a dice chip (jumps to a random problem in the list). Starred problems are pinned to the top, newest star first, then the rest by repeats. Each row: name, grade, a B badge for benchmarks, a star for projects, and a green check if sent or the attempt count. Tapping a row opens it in Session.
 4. **Grade picker:** a Digital Crown picker from V4 to V14 (the dataset starts at V4), plus Benchmarks only on or off. Opens on the last grade picked; V5 on first launch.
 5. **Light it:** after Light it, the button reads Lit with a green dot (blue while connecting, red with Retry if it failed, plus a red banner saying what to do), and Clear appears.
-6. **Beta:** free-text notes per problem. With none yet it opens straight into editing; with notes it shows them, with Edit. Saving blank text removes them.
-7. **History:** sessions grouped by day: problems tried, attempts and sends, and any high point marked that day. Tapping a problem opens it in Session. Swiping a row left offers Edit (that problem's entries and high points that day: tap to switch attempt and send, swipe to delete, Delete all) and Delete (the problem's log for that day, after a confirmation).
-8. **Settings:** hold set, V or Font grades, Stay open (start or end a climbing session), the saved board with Forget board, the Bluetooth log, and Export logs with the last export date.
+6. **History:** sessions grouped by day: problems tried, attempts and sends, and any high point marked that day. Tapping a problem opens it in Session. Swiping a row left offers Edit (that problem's entries and high points that day: tap to switch attempt and send, swipe to delete, Delete all) and Delete (the problem's log for that day, after a confirmation).
+7. **Settings:** hold set, V or Font grades, Stay open (start or end a climbing session), the saved board with Forget board, the Bluetooth log, and Export logs with the last export date.
 
 There is no separate Projects page: starred problems are pinned to the top of the list instead.
 
@@ -68,7 +67,7 @@ Everything is stored on the watch and works offline; export is the backup.
 - **Editing:** History's Edit and Delete fix anything older (for example, test logging during beta testing).
 - **Projects:** the star toggles a problem as a project. Sending a project keeps the star until it's removed by hand.
 - **High point:** one per problem, set from Hold pictures. Every marking is also recorded and shows in History.
-- **Beta:** your notes per problem, from Session or Hold pictures.
+- **Beta:** short notes pinned to holds ("heel hook", "match"), written in Hold pictures.
 - **Sessions:** History groups logs by calendar day, so no start or stop button is needed.
 - **Climbing session:** Settings › Stay open starts an indoor-climbing workout session (HealthKit) so raising the wrist shows the app instead of the clock. Nothing is saved to Health. It ends from Settings, or by itself after 3 hours.
 - **Export:** Settings → **Export logs** builds a CSV and opens the watch share sheet, so it can go out by Mail or Messages over cellular. Columns: date, time, hold set, problem id, problem, grade, type (attempt, send, star, high_point or beta), hold (the high point's position) and note (the beta text).
@@ -87,7 +86,7 @@ SwiftData on the watch, with the bundled problems kept read-only and the user's 
 | Project | problemId, holdSet, dateAdded | One row per starred problem |
 | HighPoint | problemId, holdSet, position, date | The current one, per problem and hold set |
 | HighPointMark | problemId, holdSet, position, date | Every high point marked, for History |
-| BetaNote | problemId, holdSet, text, updated | One per problem and hold set |
+| BetaNote | problemId, holdSet, position, text, updated | One per hold of a problem |
 | Settings | holdSet, boardID, boardName, lastExport, lastGrade, benchmarksOnly, gradeScale | Stored in UserDefaults |
 
 Logs, projects, high points and beta refer to problems by the dataset's problem id, so they still match after the snapshot is replaced.
@@ -106,7 +105,7 @@ One Claude Code prompt per milestone, each built in the simulator and committed 
 
 The repo gets SPEC.md (this doc, exported) and a CLAUDE.md saying to read the spec first and target the Ultra on watchOS 26.
 
-All seven milestones are built. Version 1.0 build 2 went to TestFlight on Nov 10, 2026, after the first gym visit. Since then: hold pictures and high points, then the Nov 13 review fixes (safer unsend, log editing, fuller export, no silent save failures, no crash on a bad store, faster launch and Crown stepping, random problem, climbing session). Nov 14: beta notes, tap-for-coordinates, high points in History, "Proj" label (a climber-for-scale figure was tried and removed). Releases go through `scripts/release.sh`, which bumps the build number, tests, uploads and tags `build-N`.
+All seven milestones are built. Version 1.0 build 2 went to TestFlight on Nov 10, 2026, after the first gym visit. Since then: hold pictures and high points, then the Nov 13 review fixes (safer unsend, log editing, fuller export, no silent save failures, no crash on a bad store, faster launch and Crown stepping, random problem, climbing session). Nov 14: beta pinned to holds, high points in History, "Proj" label (a climber-for-scale figure and a separate beta window were tried and removed). Releases go through `scripts/release.sh`, which bumps the build number, tests, uploads and tags `build-N`.
 
 ## Later versions and open questions
 
